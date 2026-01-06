@@ -281,17 +281,27 @@
 
         // --- Auth ---
         const initAuth = async () => {
-            try {
-                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-                    await signInWithCustomToken(auth, __initial_auth_token);
-                } else {
-                    await signInAnonymously(auth);
-                }
-            } catch (err) {
-                console.error("Auth Error:", err);
-                document.getElementById('auth-status').innerText = "Auth Failed";
+    try {
+        // ใช้ onAuthStateChanged เพื่อตรวจสอบสถานะการ Login
+        onAuthStateChanged(auth, async (u) => {
+            if (!u) {
+                // ถ้ายังไม่ได้ Login ให้ทำการ Login แบบไม่ระบุตัวตน (Anonymous)
+                await signInAnonymously(auth);
+                console.log("เข้าสู่ระบบเรียบร้อยแล้ว");
+            } else {
+                user = u;
+                // เปลี่ยนสถานะจุดเชื่อมต่อเป็นสีเขียว
+                document.getElementById('auth-dot').classList.replace('bg-red-400', 'bg-green-500');
+                document.getElementById('auth-status').querySelector('span:last-child').innerText = `ออนไลน์: ${u.uid.substring(0,4)}`;
+                document.getElementById('loader').style.display = 'none';
+                startSync(); // เริ่มดึงข้อมูลจากฐานข้อมูล
             }
-        };
+        });
+    } catch (err) {
+        console.error("Auth Error:", err);
+        document.getElementById('auth-status').innerText = "การยืนยันตัวตนล้มเหลว";
+    }
+};
 
         onAuthStateChanged(auth, u => {
             user = u;
