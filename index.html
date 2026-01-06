@@ -229,13 +229,29 @@
 
         <!-- PAGE: Datalist -->
         <div id="datalist" class="page">
-            <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
-                <h2 class="text-2xl font-bold">ฐานข้อมูลงานหลัก</h2>
-                <div class="relative w-full md:w-64">
-                    <i data-lucide="search" class="absolute left-3 top-1/2 -translate-y-1/2 text-stone-400" size="18"></i>
-                    <input type="text" id="job-search" onkeyup="window.filterJobs()" placeholder="ค้นหาออเดอร์..." class="w-full pl-10 p-2 rounded-xl border border-stone-200 outline-none focus:ring-2 focus:ring-orange-100">
-                </div>
+    <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
+        <h2 class="text-2xl font-bold">จัดการข้อมูลระบบ</h2>
+        <div class="flex flex-wrap gap-2 w-full md:w-auto">
+            <select id="data-type-filter" onchange="window.renderJobTable()" class="p-2 rounded-xl border border-stone-200 outline-none text-sm bg-white">
+                <option value="jobs">งานหลัก (Jobs)</option>
+                <option value="edit_logs">งานแก้ใหม่ (Edit Logs)</option>
+                <option value="corrections">งานแก้ไขรายชิ้น (Corrections)</option>
+            </select>
+            <div class="relative flex-1 md:w-64">
+                <i data-lucide="search" class="absolute left-3 top-1/2 -translate-y-1/2 text-stone-400" size="18"></i>
+                <input type="text" id="job-search" onkeyup="window.filterJobs()" placeholder="ค้นหา..." class="w-full pl-10 p-2 rounded-xl border border-stone-200 outline-none focus:ring-2 focus:ring-orange-100">
             </div>
+        </div>
+    </div>
+    
+    <div class="glass overflow-hidden overflow-x-auto">
+        <table class="w-full text-left text-sm">
+            <thead id="table-head" class="bg-stone-50 border-b border-stone-100 text-stone-400 uppercase text-[10px] font-bold">
+                </thead>
+            <tbody id="job-table-body" class="divide-y divide-stone-50"></tbody>
+        </table>
+    </div>
+</div>
             
             <div class="glass overflow-hidden overflow-x-auto">
                 <table class="w-full text-left text-sm">
@@ -449,27 +465,106 @@
         };
 
         window.importCSV = (event) => {
-            const file = event.target.files[0];
-            if(!file) return;
-            const reader = new FileReader();
-            reader.onload = async (e) => {
-                const lines = e.target.result.split('\n').filter(l=>l.trim());
-                let count = 0;
-                for(let i=1; i<lines.length; i++) {
-                    const cols = lines[i].split(',').map(v=>v.trim());
-                    if(cols.length >= 5) {
-                        try {
-                            await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'corrections'), {
-                                dateTime: cols[0], img: cols[1], type: cols[2], sku: cols[3], order: cols[4]
-                            });
-                            count++;
-                        } catch(err) {}
-                    }
+    const file = event.target.files[0];
+    if(!file) return;
+    
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+        const lines = e.target.result.split('\n').filter(l => l.trim());
+        const headers = lines[0].split(',').map(h => h.trim());
+        let count = 0;
+        let targetCol = "";
+
+        // ตรวจสอบโครงสร้างไฟล์จาก Header
+        if (headers.includes("รหัสออเดอร์") && headers.includes("แผนก")) {
+            targetCol = "jobs"; // 1. งานหลัก
+        } else if (headers.includes("ครั้งที่แก้") && headers.includes("จำนวนงานรวม")) {
+            targetCol = "edit_logs"; // 2. งานแก้ใหม่
+        } else if (headers.includes("รูปที่") && headers.includes("ประเภทความผิดพลาด")) {
+            targetCol = "corrections"; // 3. งานแก้ไขรายชิ้น
+        } else {
+            alert("ไม่พบรูปแบบไฟล์ที่รองรับ กรุณาตรวจสอบหัวข้อ Column ใน CSV");
+            return;
+        }
+
+        for(let i = 1; i < lines.length; i++) {
+            const cols = lines[i].split(',').map(v => v.trim());
+            let data = {};
+            
+            try {
+                if (targetCol === "jobs") {
+                    data = { 
+                        date: cols[0], time: cols[1], id: cols[2], 
+                        qty: cols[3], dept: cols[4], status: 'FALSE', createdAt: serverTimestamp() 
+                    };
+                } else if (targetCol === "edit_logs") {
+                    data = { date: cols[0], time: cols[1], count: cols[2], qty: cols[3] };
+                } else if (targetCol === "corrections") {
+                    data = { dateTime: `${cols[0]}, ${cols[1]}`, img: cols[2], type: cols[3], sku: cols[4], order: cols[5] };
                 }
-                alert(`Imported ${count} records!`);
-            };
-            reader.readAsText(file);
-        };
+                
+                await addDoc(collection(db, 'artifacts', appId, 'public', 'data', targetCol), data);
+                count++;
+            } catch(err) { console.error("Import error line " + i, err); }
+        }
+        alert(`นำเข้าข้อมูล ${targetCol} สำเร็จ ${count} รายการ!`);
+    };
+    reader.readAsText(file);
+};
+
+// --- ปรับปรุงการแสดงผลตารางให้เปลี่ยนตาม Filter ---
+function renderJobTable() {
+    const type = document.getElementById('data-type-filter').value;
+    const body = document.getElementById('job-table-body');
+    const head = document.getElementById('table-head');
+    let htmlHead = "";
+    let htmlBody = "";
+
+    if (type === 'jobs') {
+        htmlHead = `<tr><th class="p-4">วัน/เวลา</th><th class="p-4">เลขออเดอร์</th><th class="p-4">แผนก</th><th class="p-4">จำนวน</th><th class="p-4">สถานะ</th><th class="p-4 text-center">จัดการ</th></tr>`;
+        htmlBody = state.jobs.sort((a,b)=>b.date.localeCompare(a.date)).map(j => `
+            <tr class="job-row hover:bg-stone-50" data-search="${j.id}">
+                <td class="p-4 text-[11px]">${j.date} ${j.time}</td>
+                <td class="p-4 font-bold">${j.id}</td>
+                <td class="p-4"><span class="px-2 py-0.5 bg-stone-100 rounded-md text-[10px]">${j.dept}</span></td>
+                <td class="p-4 text-orange-500 font-bold">${j.qty}</td>
+                <td class="p-4"><button onclick="window.toggleStatus('${j.uid}', '${j.status}')" class="px-3 py-1 rounded-full text-[10px] font-bold ${j.status==='TRUE'?'bg-green-100 text-green-600':'bg-orange-50 text-orange-500'}">${j.status==='TRUE'?'DONE':'WAIT'}</button></td>
+                <td class="p-4 text-center"><button onclick="window.removeItem('jobs', '${j.uid}')" class="text-stone-300 hover:text-red-500"><i data-lucide="trash-2" size="16"></i></button></td>
+            </tr>`).join('');
+    } else if (type === 'edit_logs') {
+        htmlHead = `<tr><th class="p-4">วัน/เวลา</th><th class="p-4">แก้ครั้งที่</th><th class="p-4">จำนวน (PCS)</th><th class="p-4 text-center">จัดการ</th></tr>`;
+        htmlBody = state.edit_logs.map(e => `
+            <tr class="job-row hover:bg-stone-50" data-search="${e.count}">
+                <td class="p-4 text-[11px]">${e.date} ${e.time}</td>
+                <td class="p-4">ครั้งที่ ${e.count}</td>
+                <td class="p-4 font-bold">${e.qty}</td>
+                <td class="p-4 text-center"><button onclick="window.removeItem('edit_logs', '${e.uid}')" class="text-stone-300 hover:text-red-500"><i data-lucide="trash-2" size="16"></i></button></td>
+            </tr>`).join('');
+    } else if (type === 'corrections') {
+        htmlHead = `<tr><th class="p-4">วัน/เวลา</th><th class="p-4">รูปที่</th><th class="p-4">ประเภท</th><th class="p-4">SKU/ออเดอร์</th><th class="p-4 text-center">จัดการ</th></tr>`;
+        htmlBody = state.corrections.map(c => `
+            <tr class="job-row hover:bg-stone-50" data-search="${c.sku} ${c.order}">
+                <td class="p-4 text-[11px]">${c.dateTime}</td>
+                <td class="p-4">รูปที่ ${c.img}</td>
+                <td class="p-4"><span class="text-red-500 text-[10px] font-bold">${c.type}</span></td>
+                <td class="p-4">${c.sku}<br><span class="text-[10px] text-stone-400">${c.order}</span></td>
+                <td class="p-4 text-center"><button onclick="window.removeItem('corrections', '${c.uid}')" class="text-stone-300 hover:text-red-500"><i data-lucide="trash-2" size="16"></i></button></td>
+            </tr>`).join('');
+    }
+
+    head.innerHTML = htmlHead;
+    body.innerHTML = htmlBody;
+    lucide.createIcons();
+}
+
+// --- ปรับปรุงฟังก์ชัน Search ---
+window.filterJobs = () => {
+    const val = document.getElementById('job-search').value.toLowerCase();
+    document.querySelectorAll('.job-row').forEach(row => {
+        const text = row.getAttribute('data-search').toLowerCase();
+        row.style.display = text.includes(val) ? '' : 'none';
+    });
+};
 
         window.toggleStatus = async (uid, cur) => {
             await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'jobs', uid), { status: cur==='TRUE'?'FALSE':'TRUE' });
