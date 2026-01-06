@@ -496,10 +496,33 @@
         }
 
         window.onload = () => {
-            resetInputs();
-            initAuth();
-            lucide.createIcons();
-        };
+    // 1. สร้างตัวแปรเก็บรหัสผ่านที่คุณต้องการ (เปลี่ยน "1234" เป็นรหัสของคุณ)
+    const secretPassword = "0000"; 
+    
+    // 2. แสดงกล่องข้อความถามรหัสผ่าน
+    const userPass = prompt("กรุณาใส่รหัสผ่านเพื่อเข้าใช้งานระบบ:");
+
+    // 3. ตรวจสอบรหัสผ่าน
+    if (userPass === secretPassword) {
+        // ถ้ารหัสถูกต้อง ให้เริ่มการทำงานของระบบตามปกติ
+        resetInputs();
+        initAuth();
+        lucide.createIcons();
+        alert("ยินดีต้อนรับ! เข้าสู่ระบบสำเร็จ");
+    } else {
+        // ถ้ารหัสผิด ให้แสดงข้อความแจ้งเตือนและซ่อนเนื้อหาทั้งหมด
+        alert("รหัสผ่านไม่ถูกต้อง! คุณไม่มีสิทธิ์เข้าถึงหน้านี้");
+        document.body.innerHTML = `
+            <div style="display:flex; justify-content:center; align-items:center; height:100vh; background:#f5f1ed; font-family:'Prompt',sans-serif;">
+                <div style="text-align:center; padding:2rem; background:white; border-radius:20px; box-shadow:0 4px 12px rgba(0,0,0,0.1);">
+                    <h1 style="color:#ef4444; font-size:24px; margin-bottom:10px;">❌ ปฏิเสธการเข้าถึง</h1>
+                    <p style="color:#71717a;">กรุณารีเฟรชหน้าเว็บเพื่อลองใหม่อีกครั้ง</p>
+                    <button onclick="location.reload()" style="margin-top:20px; padding:10px 20px; background:#ffb347; color:white; border:none; border-radius:10px; cursor:pointer;">ลองใหม่</¹button>
+                </div>
+            </div>
+        `;
+    }
+};
     </script>
 </body>
 </html>
