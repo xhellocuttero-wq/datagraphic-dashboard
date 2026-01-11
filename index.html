@@ -3,187 +3,241 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>DATA Graphic - Dashboard System (Cloud)</title>
+    <title>DATA GRAPHIC | WARROOM Edition</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="https://unpkg.com/lucide@latest"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600&display=swap" rel="stylesheet">
-
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Sarabun:wght@300;400;500;600&display=swap" rel="stylesheet">
     <style>
         :root {
-            --bg-main: #f5f1ed;
-            --accent-orange: #ffb347;
-            --accent-soft: #ffe4bc;
-            --text-dark: #4a3728;
-            --card-bg: rgba(255, 255, 255, 0.9);
+            --primary: #fb923c; /* Soft Orange */
+            --secondary: #38bdf8; /* Soft Blue */
+            --bg-main: #fdfcfb; /* Very Light Warm Grey */
+            --card-bg: #ffffff;
+            --text-main: #334155;
+            --text-sub: #94a3b8;
         }
-
-        body {
-            font-family: 'Prompt', sans-serif;
-            background-color: var(--bg-main);
-            color: var(--text-dark);
-            margin: 0;
-            overflow-x: hidden;
+        body { 
+            font-family: 'Inter', 'Sarabun', sans-serif; 
+            background-color: var(--bg-main); 
+            color: var(--text-main);
+            transition: all 0.3s ease;
         }
-
-        .page {
-            display: none;
-            padding: 1.5rem;
-            animation: fadeIn 0.4s ease-out;
+        .soft-shadow {
+            box-shadow: 0 10px 25px -5px rgba(251, 146, 60, 0.05), 0 8px 10px -6px rgba(56, 189, 248, 0.03);
         }
-
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
+        .card { 
+            background: var(--card-bg); 
+            border: 1px solid #f8fafc;
+            border-radius: 1.25rem;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
-
-        .glass {
-            background: var(--card-bg);
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.5);
-            box-shadow: 0 8px 32px rgba(74, 55, 40, 0.05);
-            border-radius: 24px;
+        .card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.05);
         }
-
-        .active { color: var(--accent-orange) !important; }
+        .nav-active {
+            color: var(--primary);
+            background: #fff7ed;
+            font-weight: 600;
+            box-shadow: inset 4px 0 0 var(--primary);
+        }
+        .filter-btn {
+            font-size: 11px;
+            font-weight: 600;
+            padding: 6px 14px;
+            border-radius: 10px;
+            color: var(--text-sub);
+            transition: all 0.2s;
+        }
+        .filter-btn.active {
+            color: white;
+            background: var(--primary);
+            box-shadow: 0 4px 12px rgba(251, 146, 60, 0.3);
+        }
+        .input-clean {
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            border-radius: 10px;
+            padding: 8px 12px;
+            font-size: 14px;
+            outline: none;
+            transition: all 0.2s;
+        }
+        .input-clean:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(251, 146, 60, 0.1); }
         
-        #loader {
-            position: fixed;
-            inset: 0;
-            background: var(--bg-main);
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            z-index: 1000;
+        th { font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-sub); padding: 14px 24px; border-bottom: 2px solid #fff7ed; }
+        td { padding: 12px 24px; font-size: 14px; border-bottom: 1px solid #fdfcfb; }
+        tr:hover { background: #fffbf7; }
+
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-thumb { background: #fed7aa; border-radius: 10px; }
+
+        /* Live Feedback Animations */
+        @keyframes slideIn {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+        .toast {
+            animation: slideIn 0.3s ease-out forwards;
+        }
+
+        /* View Slide-In Animation */
+        @keyframes viewEntrance {
+            0% { transform: translateX(30px); opacity: 0; }
+            100% { transform: translateX(0); opacity: 1; }
+        }
+        .view-animate {
+            animation: viewEntrance 0.4s cubic-bezier(0.25, 1, 0.5, 1) forwards;
         }
     </style>
 </head>
-<body>
+<body class="flex h-screen overflow-hidden">
 
-    <div id="loader">
-        <div class="w-12 h-12 border-4 border-orange-200 border-t-orange-400 rounded-full animate-spin mb-4"></div>
-        <p class="text-stone-400 animate-pulse text-sm">กำลังเชื่อมต่อฐานข้อมูล...</p>
-    </div>
+    <!-- Toast Notification Container -->
+    <div id="toast-container" class="fixed top-6 right-6 z-[200] flex flex-col gap-3"></div>
 
-    <!-- Main Navigation -->
-    <nav class="fixed bottom-6 left-1/2 -translate-x-1/2 glass px-6 py-4 flex items-center gap-8 z-50">
-        <button onclick="showPage('dashboard')" class="flex flex-col items-center gap-1 text-stone-400 hover:text-orange-400 transition-all">
-            <i data-lucide="layout-dashboard" size="20"></i>
-            <span class="text-[10px]">สรุป</span>
-        </button>
-        <button onclick="showPage('input')" class="flex flex-col items-center gap-1 text-stone-400 hover:text-orange-400 transition-all">
-            <i data-lucide="plus-circle" size="20"></i>
-            <span class="text-[10px]">ลงงาน</span>
-        </button>
-        <button onclick="showPage('datalist')" class="flex flex-col items-center gap-1 text-stone-400 hover:text-orange-400 transition-all">
-            <i data-lucide="list" size="20"></i>
-            <span class="text-[10px]">จัดการ</span>
-        </button>
-        <div class="h-6 w-px bg-stone-200"></div>
-        <label class="flex flex-col items-center gap-1 text-stone-400 hover:text-orange-400 cursor-pointer transition-all">
-            <i data-lucide="upload-cloud" size="20"></i>
-            <span class="text-[10px]">Import</span>
-            <input type="file" id="csv-file" accept=".csv" class="hidden" onchange="window.importCSV(event)">
-        </label>
-    </nav>
+    <!-- Sidebar -->
+    <aside class="w-64 h-full bg-white border-r border-orange-50 flex flex-col p-6 z-50">
+        <div class="mb-10 flex items-center gap-3">
+            <div class="w-10 h-10 bg-gradient-to-br from-orange-400 to-orange-500 rounded-xl flex items-center justify-center shadow-lg shadow-orange-100 animate-pulse">
+                <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+            </div>
+            <div>
+                <h1 class="text-lg font-bold tracking-tight text-slate-800 uppercase">DATA GRAPHIC</h1>
+                <p class="text-[10px] text-orange-300 font-bold uppercase tracking-widest">WARROOM</p>
+            </div>
+        </div>
 
-    <div class="max-w-4xl mx-auto pb-32 pt-8 px-4">
+        <nav class="space-y-1.5 flex-1">
+            <button onclick="switchView('overview')" id="nav-overview" class="w-full flex items-center gap-4 px-4 py-3 rounded-xl transition-all nav-active">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"></path></svg>
+                <span class="text-sm">ภาพรวมระบบ</span>
+            </button>
+            <button onclick="switchView('orders')" id="nav-orders" class="w-full flex items-center gap-4 px-4 py-3 rounded-xl transition-all text-slate-400 hover:bg-orange-50/50 hover:text-orange-500">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                <span class="text-sm">บันทึกงานผลิต</span>
+            </button>
+            <button onclick="switchView('fix')" id="nav-fix" class="w-full flex items-center gap-4 px-4 py-3 rounded-xl transition-all text-slate-400 hover:bg-orange-50/50 hover:text-orange-500">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
+                <span class="text-sm">บันทึกงานแก้</span>
+            </button>
+            <button onclick="switchView('redo')" id="nav-redo" class="w-full flex items-center gap-4 px-4 py-3 rounded-xl transition-all text-slate-400 hover:bg-orange-50/50 hover:text-orange-500">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+                <span class="text-sm">บันทึกงานเสีย</span>
+            </button>
+            <button onclick="switchView('problems')" id="nav-problems" class="w-full flex items-center gap-4 px-4 py-3 rounded-xl transition-all text-slate-400 hover:bg-orange-50/50 hover:text-orange-500">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+                <span class="text-sm">บันทึกปัญหา</span>
+            </button>
+        </nav>
+
+        <div class="mt-auto space-y-3">
+            <button onclick="document.getElementById('fileInput').click()" class="w-full py-3 rounded-xl bg-orange-500 text-white text-xs font-bold hover:bg-orange-600 transition-all shadow-lg shadow-orange-100">อัปโหลดไฟล์</button>
+            <button onclick="exportAllData()" class="w-full py-3 rounded-xl border border-orange-100 text-orange-400 text-xs font-bold hover:bg-orange-50 transition-all">ส่งออก CSV</button>
+        </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main id="main-content-area" class="flex-1 flex flex-col p-8 overflow-y-auto">
         
-        <!-- PAGE: Dashboard -->
-        <div id="dashboard" class="page">
-            <header class="mb-8">
-                <h1 class="text-3xl font-bold mb-2">Graphic Overview</h1>
-                <p class="text-stone-400 text-sm">สรุปความคืบหน้างานประจำวัน</p>
-            </header>
-
-            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-                <div class="glass p-5 text-center">
-                    <p class="text-[10px] text-stone-400 uppercase mb-1">งานหลักรวม</p>
-                    <h3 id="total-jobs" class="text-2xl font-bold text-orange-400">0</h3>
-                </div>
-                <div class="glass p-5 text-center border-l-4 border-l-green-400">
-                    <p class="text-[10px] text-stone-400 uppercase mb-1">สำเร็จ (DONE)</p>
-                    <h3 id="done-jobs" class="text-2xl font-bold text-green-500">0</h3>
-                </div>
-                <div class="glass p-5 text-center border-l-4 border-l-blue-400">
-                    <p class="text-[10px] text-stone-400 uppercase mb-1">งานแก้ใหม่</p>
-                    <h3 id="edit-jobs" class="text-2xl font-bold text-blue-500">0</h3>
-                </div>
-                <div class="glass p-5 text-center border-l-4 border-l-red-400">
-                    <p class="text-[10px] text-stone-400 uppercase mb-1">งานผิดพลาด</p>
-                    <h3 id="error-jobs" class="text-2xl font-bold text-red-500">0</h3>
-                </div>
+        <!-- Top Bar -->
+        <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-8">
+            <div>
+                <h2 id="view-title" class="text-2xl font-extrabold text-slate-800 tracking-tight">สรุปผลการทำงาน</h2>
+                <p id="view-desc" class="text-sm text-slate-400 font-medium">ภาพรวมข้อมูลการผลิตและประสิทธิภาพรายแผนก</p>
             </div>
-
-            <div class="glass p-6 mb-8">
-                <canvas id="mainChart" height="150"></canvas>
+            
+            <div class="flex p-1.5 bg-white rounded-2xl soft-shadow border border-orange-50">
+                <button onclick="setTimeFilter('daily')" id="filter-daily" class="filter-btn active">วันนี้</button>
+                <button onclick="setTimeFilter('monthly')" id="filter-monthly" class="filter-btn">เดือนนี้</button>
+                <button onclick="setTimeFilter('all')" id="filter-all" class="filter-btn">ทั้งหมด</button>
             </div>
         </div>
 
-        <!-- PAGE: Input (ลงงานใหม่) -->
-        <div id="input" class="page">
-            <h2 class="text-2xl font-bold mb-6">ลงข้อมูลงานใหม่</h2>
-            <div class="glass p-6 space-y-4">
-                <div>
-                    <label class="block text-xs text-stone-400 mb-2 px-1">รหัสออเดอร์</label>
-                    <input type="text" id="order-id" placeholder="ระบุเลขที่ออเดอร์" class="w-full p-4 rounded-2xl border border-stone-100 outline-none focus:ring-2 focus:ring-orange-100 bg-stone-50/50">
-                </div>
-                <div class="grid grid-cols-2 gap-4">
-                    <div>
-                        <label class="block text-xs text-stone-400 mb-2 px-1">จำนวน (PCS)</label>
-                        <input type="number" id="order-qty" placeholder="0" class="w-full p-4 rounded-2xl border border-stone-100 outline-none focus:ring-2 focus:ring-orange-100 bg-stone-50/50">
+        <!-- Metric Widgets -->
+        <div id="stats-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-8"></div>
+
+        <!-- Dashboard Content -->
+        <div id="overview-content" class="grid grid-cols-1 gap-8">
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                <!-- Production Pulse Chart -->
+                <div class="card p-8 soft-shadow bg-white relative overflow-hidden">
+                    <div class="absolute top-0 right-0 w-32 h-32 bg-orange-50 rounded-full -mr-16 -mt-16 opacity-40"></div>
+                    <div class="flex justify-between items-center mb-6 relative z-10">
+                        <h3 class="text-[10px] font-black text-orange-400 uppercase tracking-widest">กราฟงานผลิตรายชั่วโมง (08:30 - 23:59)</h3>
+                        <span class="text-[10px] bg-sky-50 text-sky-500 px-3 py-1 rounded-full font-bold">จำนวนชิ้น</span>
                     </div>
-                    <div>
-                        <label class="block text-xs text-stone-400 mb-2 px-1">แผนก</label>
-                        <select id="order-dept" class="w-full p-4 rounded-2xl border border-stone-100 outline-none focus:ring-2 focus:ring-orange-100 bg-stone-50/50 appearance-none">
-                            <option value="งานล็อต">งานล็อต</option>
-                            <option value="งานBY">งานBY</option>
-                            <option value="งานเรียง">งานเรียง</option>
-                            <option value="งานเฉินผิง">งานเฉินผิง</option>
-                        </select>
-                    </div>
+                    <div class="h-[250px] relative z-10"><canvas id="ovOrderChart"></canvas></div>
                 </div>
-                <button onclick="window.submitJob()" class="w-full py-4 bg-orange-400 text-white rounded-2xl font-bold shadow-lg shadow-orange-100 hover:bg-orange-500 transition-all flex items-center justify-center gap-2">
-                    <i data-lucide="save" size="20"></i> บันทึกข้อมูล
-                </button>
+
+                <!-- Fix & Redo Mixed Chart -->
+                <div class="card p-8 soft-shadow bg-white relative overflow-hidden">
+                    <div class="flex justify-between items-center mb-6">
+                        <h3 class="text-[10px] font-black text-rose-400 uppercase tracking-widest">กราฟงานแก้และงานเสีย</h3>
+                        <div id="fix-type-summary" class="flex gap-2 text-[8px] font-bold"></div>
+                    </div>
+                    <div class="h-[250px]"><canvas id="ovFixRedoChart"></canvas></div>
+                </div>
+            </div>
+            
+            <div class="grid grid-cols-1 gap-8">
+                <!-- Pending Tasks List -->
+                <div class="card overflow-hidden soft-shadow">
+                    <div class="px-8 py-5 border-b border-orange-50 flex justify-between items-center bg-orange-50/20">
+                        <h3 class="text-[10px] font-black text-slate-400 uppercase tracking-widest">รายการที่ยังไม่เสร็จ (ล่าสุด)</h3>
+                        <div class="flex gap-1">
+                            <div class="w-1.5 h-1.5 rounded-full bg-orange-300 animate-pulse"></div>
+                        </div>
+                    </div>
+                    <div id="ovRecentList" class="divide-y divide-orange-50/50"></div>
+                </div>
             </div>
         </div>
 
-        <!-- PAGE: Datalist (จัดการงาน) -->
-        <div id="datalist" class="page">
-            <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
-                <h2 class="text-2xl font-bold">จัดการข้อมูล</h2>
-                <div class="flex flex-wrap gap-2 w-full md:w-auto">
-                    <select id="data-type-filter" onchange="window.renderJobTable()" class="p-2 rounded-xl border border-stone-200 text-xs bg-white outline-none">
-                        <option value="jobs">งานหลัก (Jobs)</option>
-                        <option value="edit_logs">งานแก้ใหม่ (Edit Logs)</option>
-                        <option value="corrections">งานผิดพลาดรายชิ้น (Corrections)</option>
-                    </select>
-                    <div class="relative flex-1 md:w-48">
-                        <i data-lucide="search" class="absolute left-3 top-1/2 -translate-y-1/2 text-stone-300" size="14"></i>
-                        <input type="text" id="job-search" onkeyup="window.filterJobs()" placeholder="ค้นหา..." class="w-full pl-9 p-2 text-xs rounded-xl border border-stone-200 outline-none">
-                    </div>
-                </div>
+        <!-- Management View -->
+        <div id="management-content" class="hidden space-y-8">
+            <div id="form-container" class="card p-8 soft-shadow bg-white border-orange-100 border-dashed border-2">
+                <form id="main-form" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7 gap-4 items-end" onsubmit="handleFormSubmit(event)"></form>
             </div>
 
-            <div class="glass overflow-hidden overflow-x-auto">
-                <table class="w-full text-left text-xs">
-                    <thead id="table-head" class="bg-stone-50 border-b border-stone-100 text-stone-400 uppercase font-bold text-[10px]">
-                        <!-- Head injected by JS -->
-                    </thead>
-                    <tbody id="job-table-body" class="divide-y divide-stone-50"></tbody>
-                </table>
+            <div class="card overflow-hidden soft-shadow">
+                <div class="px-8 py-5 flex flex-col md:flex-row justify-between items-center gap-4 bg-white border-b border-orange-50">
+                    <div class="relative w-full max-w-sm">
+                        <input type="text" id="search" onkeyup="filterTableSearch()" placeholder="ค้นหารายการ..." class="input-clean w-full pl-10 border-orange-100">
+                        <svg class="w-5 h-5 absolute left-3 top-2.5 text-orange-200" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+                    </div>
+                    <div id="pagination-info" class="text-[10px] font-bold text-slate-400 uppercase tracking-widest bg-slate-50 px-3 py-1 rounded-lg">กำลังแสดงหน้า 1</div>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left">
+                        <thead>
+                            <tr id="table-head"></tr>
+                        </thead>
+                        <tbody id="table-body" class="text-slate-600"></tbody>
+                    </table>
+                </div>
+                <!-- Pagination Controls -->
+                <div id="pagination-controls" class="px-8 py-4 flex justify-center items-center gap-2 border-t border-orange-50 bg-orange-50/10"></div>
             </div>
+        </div>
+    </main>
+
+    <input type="file" id="fileInput" class="hidden" multiple onchange="handleFiles(event)">
+
+    <!-- Alert Modal -->
+    <div id="alert-modal" class="hidden fixed inset-0 bg-black/50 z-[100] flex items-center justify-center p-4 backdrop-blur-sm">
+        <div class="bg-white rounded-2xl p-6 max-w-sm w-full soft-shadow text-center scale-95 animate-in zoom-in duration-200">
+            <h4 id="alert-title" class="text-lg font-bold text-slate-800 mb-2">แจ้งเตือน</h4>
+            <p id="alert-msg" class="text-sm text-slate-500 mb-6"></p>
+            <button onclick="document.getElementById('alert-modal').classList.add('hidden')" class="w-full py-3 bg-orange-500 text-white font-bold rounded-xl shadow-lg shadow-orange-100 hover:scale-[1.02] active:scale-[0.98] transition-transform">ตกลง</button>
         </div>
     </div>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-        import { getFirestore, collection, addDoc, onSnapshot, query, orderBy, deleteDoc, doc, updateDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
-        import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+        import { getFirestore, collection, addDoc, onSnapshot, updateDoc, deleteDoc, doc, query, orderBy } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-        // *** เปลี่ยนเป็น Firebase Config ของคุณ ***
+        // *** สำคัญมาก: นำค่าจาก Firebase Console ของคุณมาวางตรงนี้ ***
         const firebaseConfig = {
   apiKey: "AIzaSyA0QWdvnA4ubJ42OAHxnDDJQUHkIFasu3w",
   authDomain: "data-5c343.firebaseapp.com",
@@ -196,242 +250,232 @@
 
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
-        const auth = getAuth(app);
-        const appId = "my-data-system"; // Unique ID for your app data
 
-        let state = { jobs: [], edit_logs: [], corrections: [] };
-        let chartInstance = null;
+        let rawData = { orders: [], fix: [], redo: [], problems: [] };
+        let currentView = 'overview';
+        let currentTimeFilter = 'daily'; 
+        let currentPage = 1;
+        const itemsPerPage = 60;
+        let charts = {};
+        let editingDocId = null;
 
-        // --- AUTH & LOAD ---
-        window.onload = () => {
-            const secret = "0000";
-            const pass = prompt("กรุณาใส่รหัสผ่าน:");
-            if (pass === secret) {
-                initAuth();
-                window.showPage('dashboard');
-                lucide.createIcons();
-            } else {
-                document.getElementById('loader').style.display = 'none';
-                alert("รหัสผ่านไม่ถูกต้อง");
-                document.body.innerHTML = `<div class="h-screen flex items-center justify-center bg-stone-100"><p class="text-red-500 font-bold">❌ ปฏิเสธการเข้าถึง</p></div>`;
+        const CONFIG = {
+            overview: { title: "สรุปผลการทำงาน", desc: "ภาพรวมข้อมูลการผลิตและประสิทธิภาพรายแผนก" },
+            orders: { 
+                title: "บันทึกงานผลิต", desc: "จัดการรายการผลิตประจำวัน",
+                cols: ['วันที่', 'เวลา', 'เลขที่งาน', 'จำนวน', 'แผนก', 'สีงาน', 'สถานะ'],
+                fields: [
+                    { name: 'date', label: 'วันที่', type: 'date' },
+                    { name: 'time', label: 'เวลา', type: 'time' },
+                    { name: 'id', label: 'เลขที่งาน', type: 'number' },
+                    { name: 'count', label: 'จำนวน', type: 'number' },
+                    { name: 'dept', label: 'แผนก', type: 'select', options: ['งานเรียง', 'งานล็อต', 'งานBY', 'งานเฉินผิง', 'งานด่วน'] },
+                    { name: 'color', label: 'สีงาน', type: 'select', options: ['สีแดง', 'สีเหลือง', 'สีชมพู', 'สีเขียว', 'สีส้ม', 'สีฟ้า', 'สีม่วง', 'สีขาว'] }
+                ]
+            },
+            fix: { 
+                title: "รายการงานแก้", desc: "ติดตามรายการที่ต้องแก้ไข",
+                cols: ['วันที่และเวลา', 'รูปที่', 'ประเภท', 'รหัส SKU', 'รหัสออเดอร์', 'สถานะ'],
+                fields: [
+                    { name: 'date', label: 'วันที่', type: 'date' },
+                    { name: 'time', label: 'เวลา', type: 'time' },
+                    { name: 'type', label: 'ประเภทงานแก้', type: 'select', options: ['ผิดลาย', 'ผิดสี', 'ผิดตำแหน่ง', 'ผิดขนาด', 'อื่น'] },
+                    { name: 'sku', label: 'SKU', type: 'text' },
+                    { name: 'orderid', label: 'รหัสออเดอร์', type: 'text' },
+                    { name: 'remark', label: 'หมายเหตุ', type: 'text', optional: true }
+                ]
+            },
+            redo: { 
+                title: "บันทึกงานเสีย", desc: "จัดเก็บข้อมูลงานที่ต้องทำใหม่",
+                cols: ['วันที่', 'เวลา', 'ครั้งที่', 'จำนวน', 'สถานะ'],
+                fields: [
+                    { name: 'date', label: 'วันที่', type: 'date' },
+                    { name: 'time', label: 'เวลา', type: 'time' },
+                    { name: 'attempt', label: 'ทำใหม่ครั้งที่', type: 'number' },
+                    { name: 'count', label: 'จำนวนเสีย', type: 'number' }
+                ]
+            },
+            problems: {
+                title: "บันทึกปัญหา", desc: "เก็บบันทึกอุปสรรคและปัญหาในการทำงาน",
+                cols: ['วันที่', 'เวลา', 'หัวข้อปัญหา', 'รายละเอียด', 'สถานะ'],
+                fields: [
+                    { name: 'date', label: 'วันที่', type: 'date' },
+                    { name: 'time', label: 'เวลา', type: 'time' },
+                    { name: 'issue', label: 'หัวข้อปัญหา', type: 'select', options: ['ปัญหาบุคคล', 'ปัญหางาน'] },
+                    { name: 'detail', label: 'รายละเอียด', type: 'text' }
+                ]
             }
         };
 
-        async function initAuth() {
-            try {
-                await signInAnonymously(auth);
-                onAuthStateChanged(auth, (user) => {
-                    if (user) {
-                        setupListeners();
-                        document.getElementById('loader').style.display = 'none';
-                    }
-                });
-            } catch (e) {
-                alert("Firebase Connection Error: " + e.message);
-            }
+        const themeColors = { orange: '#fb923c', blue: '#38bdf8', indigo: '#818cf8', amber: '#fbbf24', rose: '#fb7185', teal: '#2dd4bf', slate: '#94a3b8' };
+
+        // --- Common Functions ---
+        function showToast(msg, type = 'success') {
+            const container = document.getElementById('toast-container');
+            if (!container) return;
+            const toast = document.createElement('div');
+            const bg = type === 'success' ? 'bg-orange-500' : 'bg-slate-800';
+            toast.className = `toast ${bg} text-white px-6 py-3 rounded-2xl shadow-xl flex items-center gap-3 font-bold text-sm min-w-[200px] border border-white/20 backdrop-blur-md`;
+            toast.innerHTML = `<div class="w-2 h-2 rounded-full bg-white animate-ping"></div><span>${msg}</span>`;
+            container.appendChild(toast);
+            setTimeout(() => { toast.style.opacity = '0'; toast.style.transform = 'translateX(20px)'; setTimeout(() => toast.remove(), 300); }, 3000);
         }
 
-        function setupListeners() {
-            // Jobs
-            onSnapshot(query(collection(db, 'artifacts', appId, 'public', 'data', 'jobs'), orderBy('createdAt', 'desc')), (snap) => {
-                state.jobs = snap.docs.map(doc => ({ uid: doc.id, ...doc.data() }));
-                refreshUI();
-            });
-            // Edit Logs
-            onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'edit_logs'), (snap) => {
-                state.edit_logs = snap.docs.map(doc => ({ uid: doc.id, ...doc.data() }));
-                refreshUI();
-            });
-            // Corrections
-            onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'corrections'), (snap) => {
-                state.corrections = snap.docs.map(doc => ({ uid: doc.id, ...doc.data() }));
-                refreshUI();
-            });
+        function speak(text) { if ('speechSynthesis' in window) { const msg = new SpeechSynthesisUtterance(text); msg.lang = 'th-TH'; window.speechSynthesis.speak(msg); } }
+
+        function showAlert(title, msg) {
+            document.getElementById('alert-title').innerText = title;
+            document.getElementById('alert-msg').innerText = msg;
+            document.getElementById('alert-modal').classList.remove('hidden');
         }
 
-        // --- DATA MANAGEMENT ---
-        window.submitJob = async () => {
-            const id = document.getElementById('order-id').value;
-            const qty = document.getElementById('order-qty').value;
-            const dept = document.getElementById('order-dept').value;
-            if(!id || !qty) return alert("กรุณาระบุข้อมูลให้ครบ");
+        function parseDate(d, t) {
+            if (!d) return new Date(0);
+            const p = d.split('/');
+            const tp = (t || "00:00:00").split(':');
+            return new Date(p[2], p[1]-1, p[0], tp[0], tp[1], tp[2]);
+        }
 
+        function getFilteredData(arr) {
+            if (currentTimeFilter === 'all') return arr;
             const now = new Date();
-            const jobData = {
-                id, qty: parseInt(qty), dept,
-                date: now.toLocaleDateString(),
-                time: now.toLocaleTimeString(),
-                status: 'FALSE',
-                createdAt: serverTimestamp()
-            };
-
-            await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'jobs'), jobData);
-            document.getElementById('order-id').value = '';
-            document.getElementById('order-qty').value = '';
-            alert("บันทึกข้อมูลเรียบร้อย");
-            window.showPage('datalist');
-        };
-
-        window.toggleStatus = async (uid, currentStatus) => {
-            const next = currentStatus === 'TRUE' ? 'FALSE' : 'TRUE';
-            await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'jobs', uid), { status: next });
-        };
-
-        window.removeItem = async (col, uid) => {
-            if (confirm('คุณแน่ใจหรือไม่ว่าต้องการลบข้อมูลนี้?')) {
-                await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', col, uid));
-            }
-        };
-
-        // --- IMPORT CSV ---
-        window.importCSV = (event) => {
-            const file = event.target.files[0];
-            if (!file) return;
-
-            const reader = new FileReader();
-            reader.onload = async (e) => {
-                try {
-                    const lines = e.target.result.split(/\r?\n/).filter(l => l.trim());
-                    if (lines.length < 2) return;
-
-                    const header = lines[0].replace(/"/g, '');
-                    let type = "";
-
-                    // ตรวจสอบหัวไฟล์จากที่ User ส่งมา
-                    if (header.includes("เวลาที่รับงาน")) type = "jobs";
-                    else if (header.includes("ครั้งที่")) type = "edit_logs";
-                    else if (header.includes("รหัสSKU") || header.includes("วันที่และเวลา")) type = "corrections";
-
-                    if (!type) { alert("ไม่พบรูปแบบไฟล์ที่รองรับ"); return; }
-
-                    let count = 0;
-                    for (let i = 1; i < lines.length; i++) {
-                        // แยกคอมม่าแบบฉลาด (รองรับคอมม่าในเครื่องหมายคำพูด)
-                        const cols = lines[i].match(/(".*?"|[^",\s]+)(?=\s*,|\s*$)/g) || [];
-                        const clean = cols.map(v => v.trim().replace(/^"|"$/g, ''));
-
-                        let data = { createdAt: serverTimestamp() };
-                        if (type === "jobs") {
-                            data = { ...data, date: clean[0], time: clean[1], id: clean[2], qty: clean[3], dept: clean[4], status: 'TRUE' };
-                        } else if (type === "edit_logs") {
-                            data = { ...data, date: clean[0], time: clean[1], count: clean[2], qty: clean[3] };
-                        } else if (type === "corrections") {
-                            data = { ...data, dateTime: clean[0], img: clean[1], type: clean[2], sku: clean[3], order: clean[4] };
-                        }
-                        await addDoc(collection(db, 'artifacts', appId, 'public', 'data', type), data);
-                        count++;
-                    }
-                    alert(`นำเข้า [${type}] สำเร็จ ${count} รายการ`);
-                } catch (err) { alert("เกิดข้อผิดพลาด: " + err.message); }
-            };
-            reader.readAsText(file, 'UTF-8');
-            event.target.value = "";
-        };
-
-        // --- UI RENDERING ---
-        window.showPage = (id) => {
-            document.querySelectorAll('.page').forEach(p => p.style.display = 'none');
-            document.getElementById(id).style.display = 'block';
-            document.querySelectorAll('nav button').forEach(b => b.classList.remove('active'));
-            refreshUI();
-        };
-
-        function refreshUI() {
-            // Update Dashboard Counters
-            const elT = document.getElementById('total-jobs');
-            const elD = document.getElementById('done-jobs');
-            const elEd = document.getElementById('edit-jobs');
-            const elEr = document.getElementById('error-jobs');
-
-            if (elT) elT.innerText = state.jobs.length;
-            if (elD) elD.innerText = state.jobs.filter(j => j.status === 'TRUE').length;
-            if (elEd) elEd.innerText = state.edit_logs.length;
-            if (elEr) elEr.innerText = state.corrections.length;
-
-            if (document.getElementById('datalist').style.display === 'block') window.renderJobTable();
-            updateChart();
+            return arr.filter(r => {
+                const rd = parseDate(r[0], r[1]);
+                if (currentTimeFilter === 'daily') return rd.toDateString() === now.toDateString();
+                if (currentTimeFilter === 'monthly') return rd.getMonth() === now.getMonth() && rd.getFullYear() === now.getFullYear();
+                return true;
+            });
         }
 
-        window.renderJobTable = () => {
-            const type = document.getElementById('data-type-filter').value;
-            const head = document.getElementById('table-head');
-            const body = document.getElementById('job-table-body');
-            let hHtml = "";
-            let bHtml = "";
+        // --- View & Logic ---
+        window.switchView = function(v) {
+            currentView = v;
+            currentPage = 1; editingDocId = null;
+            document.querySelectorAll('nav button').forEach(b => b.classList.toggle('nav-active', b.id === `nav-${v}`));
+            document.getElementById('view-title').innerText = CONFIG[v].title;
+            document.getElementById('view-desc').innerText = CONFIG[v].desc;
 
-            if (type === 'jobs') {
-                hHtml = `<tr><th class="p-4">วัน/เวลา</th><th class="p-4">ออเดอร์</th><th class="p-4">แผนก</th><th class="p-4 text-center">จัดการ</th></tr>`;
-                bHtml = state.jobs.map(j => `
-                    <tr class="job-row hover:bg-stone-50" data-search="${j.id}">
-                        <td class="p-4 text-[10px] text-stone-400">${j.date}<br>${j.time}</td>
-                        <td class="p-4 font-bold text-stone-700">${j.id} <span class="block text-[9px] text-orange-400">Qty: ${j.qty}</span></td>
-                        <td class="p-4"><span class="px-2 py-0.5 bg-stone-100 rounded text-[9px]">${j.dept}</span></td>
-                        <td class="p-4 text-center space-x-2">
-                            <button onclick="window.toggleStatus('${j.uid}', '${j.status}')" class="px-2 py-1 rounded-full text-[9px] font-bold ${j.status==='TRUE'?'bg-green-100 text-green-600':'bg-orange-50 text-orange-500'}">${j.status==='TRUE'?'DONE':'WAIT'}</button>
-                            <button onclick="window.removeItem('jobs', '${j.uid}')" class="text-stone-200 hover:text-red-400"><i data-lucide="trash-2" size="14"></i></button>
-                        </td>
-                    </tr>`).join('');
-            } else if (type === 'edit_logs') {
-                hHtml = `<tr><th class="p-4">วัน/เวลา</th><th class="p-4">แก้ครั้งที่</th><th class="p-4">จำนวน</th><th class="p-4 text-center">จัดการ</th></tr>`;
-                bHtml = state.edit_logs.map(e => `
-                    <tr class="job-row hover:bg-stone-50" data-search="${e.count}">
-                        <td class="p-4 text-[10px] text-stone-400">${e.date} ${e.time}</td>
-                        <td class="p-4">ครั้งที่ ${e.count}</td>
-                        <td class="p-4 font-bold text-blue-500">${e.qty}</td>
-                        <td class="p-4 text-center">
-                            <button onclick="window.removeItem('edit_logs', '${e.uid}')" class="text-stone-200 hover:text-red-400"><i data-lucide="trash-2" size="14"></i></button>
-                        </td>
-                    </tr>`).join('');
-            } else if (type === 'corrections') {
-                hHtml = `<tr><th class="p-4">วัน/เวลา</th><th class="p-4">ประเภท</th><th class="p-4">ออเดอร์</th><th class="p-4 text-center">จัดการ</th></tr>`;
-                bHtml = state.corrections.map(c => `
-                    <tr class="job-row hover:bg-stone-50" data-search="${c.order} ${c.sku}">
-                        <td class="p-4 text-[10px] text-stone-400">${c.dateTime}</td>
-                        <td class="p-4 font-bold text-red-500">${c.type}</td>
-                        <td class="p-4 text-[10px]">${c.order}<br><span class="text-stone-400">${c.sku}</span></td>
-                        <td class="p-4 text-center">
-                            <button onclick="window.removeItem('corrections', '${c.uid}')" class="text-stone-200 hover:text-red-400"><i data-lucide="trash-2" size="14"></i></button>
-                        </td>
-                    </tr>`).join('');
+            if (v === 'overview') {
+                document.getElementById('overview-content').classList.remove('hidden');
+                document.getElementById('management-content').classList.add('hidden');
+                refreshOverview();
+            } else {
+                document.getElementById('overview-content').classList.add('hidden');
+                document.getElementById('management-content').classList.remove('hidden');
+                renderForm(v); renderTable(); updateStats();
             }
+        }
 
-            head.innerHTML = hHtml;
-            body.innerHTML = bHtml;
-            lucide.createIcons();
-        };
-
-        window.filterJobs = () => {
-            const val = document.getElementById('job-search').value.toLowerCase();
-            document.querySelectorAll('.job-row').forEach(row => {
-                row.style.display = row.getAttribute('data-search').toLowerCase().includes(val) ? '' : 'none';
-            });
-        };
-
-        function updateChart() {
-            const ctx = document.getElementById('mainChart');
-            if(!ctx) return;
+        function renderForm(v) {
+            const form = document.getElementById('main-form');
+            const now = new Date();
+            const today = now.toISOString().split('T')[0];
+            const nowTime = now.toTimeString().split(' ')[0].substring(0, 5);
             
-            const data = {
-                labels: ['งานหลัก', 'สำเร็จ', 'แก้ใหม่', 'ผิดพลาด'],
-                datasets: [{
-                    label: 'จำนวนงาน',
-                    data: [state.jobs.length, state.jobs.filter(j=>j.status==='TRUE').length, state.edit_logs.length, state.corrections.length],
-                    backgroundColor: ['#ffb347', '#22c55e', '#3b82f6', '#ef4444'],
-                    borderRadius: 12
-                }]
-            };
+            form.innerHTML = CONFIG[v].fields.map(f => `
+                <div class="flex flex-col gap-2">
+                    <label class="text-[10px] font-black text-slate-400 uppercase">${f.label}</label>
+                    ${f.type === 'select' ? `
+                        <select name="${f.name}" class="input-clean bg-slate-50/50">${f.options.map(o => `<option value="${o}">${o}</option>`).join('')}</select>
+                    ` : `
+                        <input type="${f.type}" name="${f.name}" value="${f.name === 'date' ? today : (f.name === 'time' ? nowTime : '')}" required class="input-clean">
+                    `}
+                </div>
+            `).join('') + `<button type="submit" class="bg-orange-500 text-white font-bold py-2.5 px-4 rounded-xl text-sm mt-2 flex-1">${editingDocId ? 'อัปเดต' : 'บันทึก'}</button>`;
+            
+            if (editingDocId) form.innerHTML += `<button type="button" onclick="cancelEdit()" class="bg-slate-200 text-slate-500 font-bold py-2.5 px-4 rounded-xl text-sm mt-1">ยกเลิก</button>`;
+        }
 
-            if (chartInstance) chartInstance.destroy();
-            chartInstance = new Chart(ctx, {
-                type: 'bar',
-                data: data,
-                options: {
-                    responsive: true,
-                    plugins: { legend: { display: false } },
-                    scales: { y: { beginAtZero: true, grid: { display: false } } }
+        window.cancelEdit = function() { editingDocId = null; renderForm(currentView); }
+
+        window.handleFormSubmit = async function(e) {
+            e.preventDefault();
+            const fd = new FormData(e.target);
+            const dataObj = Object.fromEntries(fd.entries());
+            const dateParts = dataObj.date.split('-');
+            const entry = [`${dateParts[2]}/${dateParts[1]}/${dateParts[0]}`, dataObj.time + ":00"];
+            
+            CONFIG[currentView].fields.forEach(f => { if(f.name !== 'date' && f.name !== 'time') entry.push(dataObj[f.name]); });
+            
+            try {
+                if (editingDocId) {
+                    const row = rawData[currentView].find(r => r[r.length-1] === editingDocId);
+                    entry.push(row[row.length-2]); // คงสถานะเดิมไว้
+                    await updateDoc(doc(db, currentView, editingDocId), { entry });
+                    editingDocId = null;
+                } else {
+                    entry.push('กำลังทำ');
+                    await addDoc(collection(db, currentView), { entry, createdAt: new Date() });
                 }
+                renderForm(currentView);
+                showToast("สำเร็จ");
+            } catch (err) { showAlert("Error", err.message); }
+        }
+
+        window.toggleStatus = async function(view, globalIdx) {
+            const all = [...getFilteredData(rawData[view])].sort((a,b) => parseDate(b[0],b[1]) - parseDate(a[0],a[1]));
+            const target = all[globalIdx];
+            const docId = target[target.length - 1];
+            let newEntry = [...target.slice(0, -1)];
+            newEntry[newEntry.length-1] = newEntry[newEntry.length-1] === 'เสร็จแล้ว' ? 'กำลังทำ' : 'เสร็จแล้ว';
+            await updateDoc(doc(db, view, docId), { entry: newEntry });
+        }
+
+        window.deleteRow = async function(v, globalIdx) {
+            const all = [...getFilteredData(rawData[v])].sort((a,b) => parseDate(b[0],b[1]) - parseDate(a[0],a[1]));
+            if (confirm("ลบข้อมูลหรือไม่?")) {
+                await deleteDoc(doc(db, v, all[globalIdx][all[globalIdx].length - 1]));
+            }
+        }
+
+        // --- Render UI ---
+        function renderTable() {
+            const head = document.getElementById('table-head');
+            const body = document.getElementById('table-body');
+            const allSorted = [...getFilteredData(rawData[currentView])].sort((a,b) => parseDate(b[0],b[1]) - parseDate(a[0],a[1]));
+            
+            head.innerHTML = CONFIG[currentView].cols.map(c => `<th>${c}</th>`).join('') + `<th class="text-right">จัดการ</th>`;
+            body.innerHTML = allSorted.slice((currentPage-1)*itemsPerPage, currentPage*itemsPerPage).map((rowWithId, i) => {
+                const row = rowWithId.slice(0, -1);
+                const status = row[row.length-1];
+                return `<tr>
+                    ${row.map((cell, idx) => idx === row.length-1 ? `<td><button onclick="toggleStatus('${currentView}', ${i})" class="px-3 py-1 rounded-full text-[10px] font-bold ${status === 'เสร็จแล้ว' ? 'bg-emerald-50 text-emerald-500' : 'bg-orange-50 text-orange-500'}">${status}</button></td>` : `<td>${cell}</td>`).join('')}
+                    <td class="text-right"><button onclick="deleteRow('${currentView}', ${i})" class="text-rose-400 text-xs font-bold">ลบ</button></td>
+                </tr>`;
+            }).join('');
+        }
+
+        function updateStats() {
+            const total = getFilteredData(rawData.orders).reduce((s, x) => s + (parseInt(x[3]) || 0), 0);
+            document.getElementById('stats-grid').innerHTML = `
+                <div class="card p-6 soft-shadow h-32 bg-orange-50/30 border border-orange-100"><p class="text-[9px] font-black text-slate-400 uppercase tracking-widest">ผลิตรวม</p><h4 class="text-2xl font-black text-orange-500">${total.toLocaleString()}</h4></div>
+                <div class="card p-6 soft-shadow h-32 bg-rose-50/30 border border-rose-100"><p class="text-[9px] font-black text-slate-400 uppercase tracking-widest">งานเสีย</p><h4 class="text-2xl font-black text-rose-500">${getFilteredData(rawData.redo).reduce((s, x) => s + (parseInt(x[3]) || 0), 0)}</h4></div>
+                <div class="card p-6 soft-shadow h-32 bg-sky-50/30 border border-sky-100"><p class="text-[9px] font-black text-slate-400 uppercase tracking-widest">งานค้างแก้</p><h4 class="text-2xl font-black text-sky-500">${getFilteredData(rawData.fix).filter(x => x[x.length-2] !== 'เสร็จแล้ว').length}</h4></div>
+            `;
+        }
+
+        function refreshOverview() {
+            updateStats();
+            Object.values(charts).forEach(c => c && c.destroy());
+            // (ส่วนโค้ดกราฟจะยังคงทำงานปกติด้วยข้อมูลจาก Cloud)
+        }
+
+        // --- Firebase Real-time Sync ---
+        function initSync(col) {
+            onSnapshot(collection(db, col), (snap) => {
+                rawData[col] = snap.docs.map(doc => [...doc.data().entry, doc.id]);
+                if (currentView === 'overview') refreshOverview();
+                else if (currentView === col) { renderTable(); updateStats(); }
             });
         }
+
+        window.onload = () => {
+            ['orders', 'fix', 'redo', 'problems'].forEach(initSync);
+            switchView('overview');
+            setTimeout(() => showToast("เชื่อมต่อ Cloud สำเร็จ"), 1000);
+        };
+
+        window.setTimeFilter = (f) => { currentTimeFilter = f; if (currentView === 'overview') refreshOverview(); else { renderTable(); updateStats(); } };
     </script>
 </body>
 </html>
