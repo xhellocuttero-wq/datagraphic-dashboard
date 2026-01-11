@@ -3,10 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>DATA GRAPHIC | WARROOM Edition</title>
+    <title>DATA GRAPHIC | WARROOM Edition (Cloud)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Sarabun:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <!-- Firebase Libraries -->
+    <script src="https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js" type="module"></script>
+    <script src="https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js" type="module"></script>
+    <script src="https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js" type="module"></script>
     <style>
         :root {
             --primary: #fb923c; /* Soft Orange */
@@ -132,6 +136,7 @@
         </nav>
 
         <div class="mt-auto space-y-3">
+            <div id="user-display" class="text-[10px] text-slate-400 font-bold mb-2 break-all px-2">Loading Auth...</div>
             <button onclick="document.getElementById('fileInput').click()" class="w-full py-3 rounded-xl bg-orange-500 text-white text-xs font-bold hover:bg-orange-600 transition-all shadow-lg shadow-orange-100">อัปโหลดไฟล์</button>
             <button onclick="exportAllData()" class="w-full py-3 rounded-xl border border-orange-100 text-orange-400 text-xs font-bold hover:bg-orange-50 transition-all">ส่งออก CSV</button>
         </div>
@@ -202,7 +207,7 @@
 
             <div class="card overflow-hidden soft-shadow">
                 <div class="px-8 py-5 flex flex-col md:flex-row justify-between items-center gap-4 bg-white border-b border-orange-50">
-                    <div class="relative w-full max-w-sm">
+                    <div class="relative w-full max-sm:w-full max-w-sm">
                         <input type="text" id="search" onkeyup="filterTableSearch()" placeholder="ค้นหารายการ..." class="input-clean w-full pl-10 border-orange-100">
                         <svg class="w-5 h-5 absolute left-3 top-2.5 text-orange-200" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
                     </div>
@@ -234,10 +239,10 @@
     </div>
 
     <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-        import { getFirestore, collection, addDoc, onSnapshot, updateDoc, deleteDoc, doc, query, orderBy } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInWithCustomToken, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, setDoc, getDoc, updateDoc, collection, onSnapshot, query, addDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-        // *** สำคัญมาก: นำค่าจาก Firebase Console ของคุณมาวางตรงนี้ ***
         const firebaseConfig = {
   apiKey: "AIzaSyA0QWdvnA4ubJ42OAHxnDDJQUHkIFasu3w",
   authDomain: "data-5c343.firebaseapp.com",
@@ -247,9 +252,10 @@
   appId: "1:555799172632:web:ced0d5f789362a9228156d",
   measurementId: "G-S132TKE0NB"
 };
-
         const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
         const db = getFirestore(app);
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
 
         let rawData = { orders: [], fix: [], redo: [], problems: [] };
         let currentView = 'overview';
@@ -257,7 +263,8 @@
         let currentPage = 1;
         const itemsPerPage = 60;
         let charts = {};
-        let editingDocId = null;
+        let editingRealIdx = -1;
+        let user = null;
 
         const CONFIG = {
             overview: { title: "สรุปผลการทำงาน", desc: "ภาพรวมข้อมูลการผลิตและประสิทธิภาพรายแผนก" },
@@ -309,10 +316,59 @@
 
         const themeColors = { orange: '#fb923c', blue: '#38bdf8', indigo: '#818cf8', amber: '#fbbf24', rose: '#fb7185', teal: '#2dd4bf', slate: '#94a3b8' };
 
-        // --- Common Functions ---
+        // Firebase Sync Engine
+        async function initAuth() {
+            if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                await signInWithCustomToken(auth, __initial_auth_token);
+            } else {
+                await signInAnonymously(auth);
+            }
+        }
+
+        onAuthStateChanged(auth, (u) => {
+            user = u;
+            if (u) {
+                document.getElementById('user-display').innerText = `USER: ${u.uid}`;
+                syncData();
+            }
+        });
+
+        function syncData() {
+            if (!user) return;
+            const collections = ['orders', 'fix', 'redo', 'problems'];
+            collections.forEach(col => {
+                const q = collection(db, 'artifacts', appId, 'public', 'data', col);
+                onSnapshot(q, (snapshot) => {
+                    rawData[col] = snapshot.docs.map(doc => ({ firebaseId: doc.id, data: doc.data().data }))
+                        .sort((a,b) => parseDate(b.data[0], b.data[1]) - parseDate(a.data[0], a.data[1]))
+                        .map(item => item.data);
+                    
+                    if (currentView === 'overview') refreshOverview(); 
+                    else if (currentView === col || currentView !== 'overview') {
+                        renderTable();
+                        updateStats();
+                    }
+                }, (error) => console.error("Snapshot error:", error));
+            });
+        }
+
+        // Exposed functions to global scope
+        window.switchView = switchView;
+        window.setTimeFilter = setTimeFilter;
+        window.handleFormSubmit = handleFormSubmit;
+        window.toggleStatus = toggleStatus;
+        window.directToggleStatus = directToggleStatus;
+        window.deleteRow = deleteRow;
+        window.editRow = editRow;
+        window.cancelEdit = cancelEdit;
+        window.changePage = changePage;
+        window.filterTableSearch = filterTableSearch;
+        window.handleFiles = handleFiles;
+        window.exportAllData = exportAllData;
+        window.showAlert = showAlert;
+
         function showToast(msg, type = 'success') {
             const container = document.getElementById('toast-container');
-            if (!container) return;
             const toast = document.createElement('div');
             const bg = type === 'success' ? 'bg-orange-500' : 'bg-slate-800';
             toast.className = `toast ${bg} text-white px-6 py-3 rounded-2xl shadow-xl flex items-center gap-3 font-bold text-sm min-w-[200px] border border-white/20 backdrop-blur-md`;
@@ -321,19 +377,16 @@
             setTimeout(() => { toast.style.opacity = '0'; toast.style.transform = 'translateX(20px)'; setTimeout(() => toast.remove(), 300); }, 3000);
         }
 
-        function speak(text) { if ('speechSynthesis' in window) { const msg = new SpeechSynthesisUtterance(text); msg.lang = 'th-TH'; window.speechSynthesis.speak(msg); } }
-
-        function showAlert(title, msg) {
-            document.getElementById('alert-title').innerText = title;
-            document.getElementById('alert-msg').innerText = msg;
-            document.getElementById('alert-modal').classList.remove('hidden');
-        }
-
-        function parseDate(d, t) {
-            if (!d) return new Date(0);
-            const p = d.split('/');
-            const tp = (t || "00:00:00").split(':');
-            return new Date(p[2], p[1]-1, p[0], tp[0], tp[1], tp[2]);
+        function speak(text) { if ('speechSynthesis' in window) { const msg = new SpeechSynthesisUtterance(text); msg.lang = 'th-TH'; msg.rate = 1.1; window.speechSynthesis.speak(msg); } }
+        function showAlert(title, msg) { document.getElementById('alert-title').innerText = title; document.getElementById('alert-msg').innerText = msg; document.getElementById('alert-modal').classList.remove('hidden'); speak(msg); }
+        function parseDate(d, t) { 
+            if (!d) return new Date(0); 
+            let dateStr = d;
+            if (d.includes('"')) dateStr = d.replace(/"/g, '').split(',')[0].trim();
+            const p = dateStr.split('/');
+            const tp = (t || "00:00:00").split(':'); 
+            if (p.length < 3) return new Date(0); 
+            return new Date(p[2].length === 2 ? '20' + p[2] : p[2], p[1]-1, p[0], tp[0], tp[1], tp[2]); 
         }
 
         function getFilteredData(arr) {
@@ -347,14 +400,20 @@
             });
         }
 
-        // --- View & Logic ---
-        window.switchView = function(v) {
-            currentView = v;
-            currentPage = 1; editingDocId = null;
+        function setTimeFilter(f) {
+            currentTimeFilter = f; currentPage = 1; 
+            document.querySelectorAll('.filter-btn').forEach(b => b.classList.toggle('active', b.id === `filter-${f}`));
+            if (currentView === 'overview') refreshOverview(); else { renderTable(); updateStats(); }
+            showToast(`กรองข้อมูล: ${f === 'daily' ? 'วันนี้' : (f === 'monthly' ? 'เดือนนี้' : 'ทั้งหมด')}`, 'info');
+        }
+
+        function switchView(v) {
+            currentView = v; currentPage = 1; editingRealIdx = -1;
             document.querySelectorAll('nav button').forEach(b => b.classList.toggle('nav-active', b.id === `nav-${v}`));
             document.getElementById('view-title').innerText = CONFIG[v].title;
             document.getElementById('view-desc').innerText = CONFIG[v].desc;
-
+            const mainArea = document.getElementById('main-content-area');
+            mainArea.classList.remove('view-animate'); void mainArea.offsetWidth; mainArea.classList.add('view-animate');
             if (v === 'overview') {
                 document.getElementById('overview-content').classList.remove('hidden');
                 document.getElementById('management-content').classList.add('hidden');
@@ -364,118 +423,260 @@
                 document.getElementById('management-content').classList.remove('hidden');
                 renderForm(v); renderTable(); updateStats();
             }
+            speak(`เปิดหน้า${CONFIG[v].title}`);
         }
 
         function renderForm(v) {
             const form = document.getElementById('main-form');
-            const now = new Date();
-            const today = now.toISOString().split('T')[0];
+            const container = document.getElementById('form-container');
+            const now = new Date(); const today = now.toISOString().split('T')[0];
             const nowTime = now.toTimeString().split(' ')[0].substring(0, 5);
-            
+            const isEditing = editingRealIdx > -1;
+            container.className = isEditing ? "card p-8 soft-shadow bg-sky-50/30 border-sky-200 border-2" : "card p-8 soft-shadow bg-white border-orange-100 border-dashed border-2";
             form.innerHTML = CONFIG[v].fields.map(f => `
                 <div class="flex flex-col gap-2">
-                    <label class="text-[10px] font-black text-slate-400 uppercase">${f.label}</label>
-                    ${f.type === 'select' ? `
-                        <select name="${f.name}" class="input-clean bg-slate-50/50">${f.options.map(o => `<option value="${o}">${o}</option>`).join('')}</select>
-                    ` : `
-                        <input type="${f.type}" name="${f.name}" value="${f.name === 'date' ? today : (f.name === 'time' ? nowTime : '')}" required class="input-clean">
-                    `}
-                </div>
-            `).join('') + `<button type="submit" class="bg-orange-500 text-white font-bold py-2.5 px-4 rounded-xl text-sm mt-2 flex-1">${editingDocId ? 'อัปเดต' : 'บันทึก'}</button>`;
-            
-            if (editingDocId) form.innerHTML += `<button type="button" onclick="cancelEdit()" class="bg-slate-200 text-slate-500 font-bold py-2.5 px-4 rounded-xl text-sm mt-1">ยกเลิก</button>`;
+                    <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest">${f.label}${f.optional ? ' (เลือกได้)' : ''}</label>
+                    ${f.type === 'select' ? `<select name="${f.name}" id="field-${f.name}" class="input-clean bg-slate-50/50">${f.options.map(o => `<option value="${o}">${o}</option>`).join('')}</select>` 
+                    : `<input type="${f.type}" name="${f.name}" id="field-${f.name}" value="${f.name === 'date' ? today : (f.name === 'time' ? nowTime : '')}" ${f.optional ? '' : 'required'} class="input-clean">`}
+                </div>`).join('') + `
+            <div class="flex gap-2">
+                <button type="submit" class="${isEditing ? 'bg-sky-500 hover:bg-sky-600' : 'bg-orange-500 hover:bg-orange-600'} text-white font-bold py-2.5 px-4 rounded-xl text-sm transition-all shadow-lg shadow-orange-100 mt-2 flex-1 hover:scale-[1.02] active:scale-[0.98]">
+                    ${isEditing ? 'อัปเดตรายการ' : 'บันทึก'}
+                </button>
+                ${isEditing ? `<button type="button" onclick="cancelEdit()" class="bg-slate-200 text-slate-500 font-bold py-2.5 px-4 rounded-xl text-sm mt-2 hover:bg-slate-300 transition-colors">ยกเลิก</button>` : ''}
+            </div>`;
         }
 
-        window.cancelEdit = function() { editingDocId = null; renderForm(currentView); }
+        function cancelEdit() { editingRealIdx = -1; renderForm(currentView); }
 
-        window.handleFormSubmit = async function(e) {
+        async function handleFormSubmit(e) {
             e.preventDefault();
+            if (!user) return;
             const fd = new FormData(e.target);
             const dataObj = Object.fromEntries(fd.entries());
             const dateParts = dataObj.date.split('-');
-            const entry = [`${dateParts[2]}/${dateParts[1]}/${dateParts[0]}`, dataObj.time + ":00"];
-            
-            CONFIG[currentView].fields.forEach(f => { if(f.name !== 'date' && f.name !== 'time') entry.push(dataObj[f.name]); });
+            const dateStr = `${dateParts[2]}/${dateParts[1]}/${dateParts[0]}`;
+            let timeStr = dataObj.time; if (timeStr.split(':').length === 2) timeStr += ":00";
+            const entry = [dateStr, timeStr];
+            CONFIG[currentView].fields.forEach(f => { if (f.name !== 'date' && f.name !== 'time') entry.push(dataObj[f.name]); });
             
             try {
-                if (editingDocId) {
-                    const row = rawData[currentView].find(r => r[r.length-1] === editingDocId);
-                    entry.push(row[row.length-2]); // คงสถานะเดิมไว้
-                    await updateDoc(doc(db, currentView, editingDocId), { entry });
-                    editingDocId = null;
+                if (editingRealIdx > -1) {
+                    const sorted = [...getFilteredData(rawData[currentView])].sort((a,b) => parseDate(b[0],b[1]) - parseDate(a[0],a[1]));
+                    const target = sorted[editingRealIdx];
+                    const oldStatus = target[target.length - 1];
+                    entry.push(oldStatus);
+                    
+                    const q = collection(db, 'artifacts', appId, 'public', 'data', currentView);
+                    onSnapshot(q, async (snapshot) => {
+                        const targetDoc = snapshot.docs.find(d => JSON.stringify(d.data().data) === JSON.stringify(target));
+                        if (targetDoc) await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', currentView, targetDoc.id), { data: entry });
+                    }, (e)=>{}, {once: true});
+                    
+                    editingRealIdx = -1;
+                    showToast("อัปเดตข้อมูลสำเร็จ");
                 } else {
                     entry.push('กำลังทำ');
-                    await addDoc(collection(db, currentView), { entry, createdAt: new Date() });
+                    await addDoc(collection(db, 'artifacts', appId, 'public', 'data', currentView), { data: entry, timestamp: new Date() });
+                    showToast("บันทึกข้อมูลใหม่แล้ว");
+                    speak("บันทึกรายการสำเร็จค่ะ");
                 }
                 renderForm(currentView);
-                showToast("สำเร็จ");
-            } catch (err) { showAlert("Error", err.message); }
+            } catch (err) { console.error(err); }
         }
 
-        window.toggleStatus = async function(view, globalIdx) {
-            const all = [...getFilteredData(rawData[view])].sort((a,b) => parseDate(b[0],b[1]) - parseDate(a[0],a[1]));
-            const target = all[globalIdx];
-            const docId = target[target.length - 1];
-            let newEntry = [...target.slice(0, -1)];
-            newEntry[newEntry.length-1] = newEntry[newEntry.length-1] === 'เสร็จแล้ว' ? 'กำลังทำ' : 'เสร็จแล้ว';
-            await updateDoc(doc(db, view, docId), { entry: newEntry });
+        async function toggleStatus(view, globalIdx) {
+            if (!user) return;
+            const allInView = [...getFilteredData(rawData[view])].sort((a,b) => parseDate(b[0],b[1]) - parseDate(a[0],a[1]));
+            const targetRow = allInView[globalIdx];
+            if (!targetRow) return;
+
+            let nextStatus = targetRow[targetRow.length - 1] === 'เสร็จแล้ว' ? 'กำลังทำ' : 'เสร็จแล้ว';
+            const updatedRow = [...targetRow];
+            updatedRow[updatedRow.length - 1] = nextStatus;
+
+            const q = collection(db, 'artifacts', appId, 'public', 'data', view);
+            onSnapshot(q, async (snapshot) => {
+                const targetDoc = snapshot.docs.find(d => JSON.stringify(d.data().data) === JSON.stringify(targetRow));
+                if (targetDoc) {
+                    await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', view, targetDoc.id), { data: updatedRow });
+                }
+            }, (e) => {}, { once: true });
+            
+            showToast(`เปลี่ยนสถานะเป็น: ${nextStatus}`);
         }
 
-        window.deleteRow = async function(v, globalIdx) {
-            const all = [...getFilteredData(rawData[v])].sort((a,b) => parseDate(b[0],b[1]) - parseDate(a[0],a[1]));
-            if (confirm("ลบข้อมูลหรือไม่?")) {
-                await deleteDoc(doc(db, v, all[globalIdx][all[globalIdx].length - 1]));
-            }
+        async function deleteRow(v, globalIdx) {
+            if (!user) return;
+            const allSortedData = [...getFilteredData(rawData[v])].sort((a,b) => parseDate(b[0],b[1]) - parseDate(a[0],a[1]));
+            const target = allSortedData[globalIdx];
+            
+            const q = collection(db, 'artifacts', appId, 'public', 'data', v);
+            onSnapshot(q, async (snapshot) => {
+                const targetDoc = snapshot.docs.find(d => JSON.stringify(d.data().data) === JSON.stringify(target));
+                if (targetDoc) await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', v, targetDoc.id));
+            }, (e) => {}, { once: true });
+            showToast("ลบข้อมูลแล้ว", "info");
         }
 
-        // --- Render UI ---
+        function editRow(v, globalIdx) {
+            const allSortedData = [...getFilteredData(rawData[v])].sort((a,b) => parseDate(b[0],b[1]) - parseDate(a[0],a[1]));
+            const target = allSortedData[globalIdx];
+            editingRealIdx = globalIdx;
+            renderForm(v);
+            let dateStr = target[0];
+            if (dateStr.includes('"')) dateStr = dateStr.replace(/"/g, '').split(',')[0].trim();
+            const dParts = dateStr.split('/');
+            const yr = dParts[2].length === 2 ? '20'+dParts[2] : dParts[2];
+            document.getElementById('field-date').value = `${yr}-${dParts[1].padStart(2, '0')}-${dParts[0].padStart(2, '0')}`;
+            document.getElementById('field-time').value = target[1].substring(0, 5);
+            CONFIG[v].fields.forEach((f, fIdx) => {
+                if (f.name !== 'date' && f.name !== 'time') {
+                    const input = document.getElementById(`field-${f.name}`);
+                    if (input) input.value = target[fIdx + 2] || '';
+                }
+            });
+            document.querySelector('main').scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
         function renderTable() {
             const head = document.getElementById('table-head');
             const body = document.getElementById('table-body');
-            const allSorted = [...getFilteredData(rawData[currentView])].sort((a,b) => parseDate(b[0],b[1]) - parseDate(a[0],a[1]));
-            
+            const info = document.getElementById('pagination-info');
+            const controls = document.getElementById('pagination-controls');
+            const allSortedData = [...getFilteredData(rawData[currentView])].sort((a,b) => parseDate(b[0],b[1]) - parseDate(a[0],a[1]));
+            const totalItems = allSortedData.length;
+            const totalPages = Math.ceil(totalItems / itemsPerPage) || 1;
+            if (currentPage > totalPages) currentPage = totalPages;
+            const start = (currentPage - 1) * itemsPerPage;
+            const displayData = allSortedData.slice(start, start + itemsPerPage);
+            info.innerText = `หน้า ${currentPage} จาก ${totalPages} (ทั้งหมด ${totalItems} รายการ)`;
             head.innerHTML = CONFIG[currentView].cols.map(c => `<th>${c}</th>`).join('') + `<th class="text-right">จัดการ</th>`;
-            body.innerHTML = allSorted.slice((currentPage-1)*itemsPerPage, currentPage*itemsPerPage).map((rowWithId, i) => {
-                const row = rowWithId.slice(0, -1);
-                const status = row[row.length-1];
-                return `<tr>
-                    ${row.map((cell, idx) => idx === row.length-1 ? `<td><button onclick="toggleStatus('${currentView}', ${i})" class="px-3 py-1 rounded-full text-[10px] font-bold ${status === 'เสร็จแล้ว' ? 'bg-emerald-50 text-emerald-500' : 'bg-orange-50 text-orange-500'}">${status}</button></td>` : `<td>${cell}</td>`).join('')}
-                    <td class="text-right"><button onclick="deleteRow('${currentView}', ${i})" class="text-rose-400 text-xs font-bold">ลบ</button></td>
+            body.innerHTML = displayData.map((row, localIdx) => {
+                const globalIdx = start + localIdx;
+                const statusIndex = row.length - 1;
+                const statusVal = row[statusIndex];
+                let statusClass = "px-3 py-1 rounded-full text-[10px] font-bold transition-all " + (statusVal === 'เสร็จแล้ว' || statusVal === 'TRUE' ? "bg-emerald-50 text-emerald-500" : "bg-orange-50 text-orange-500");
+                return `<tr class="group animate-in fade-in duration-300">
+                    ${row.map((cell, cIdx) => cIdx === statusIndex ? `<td><button onclick="toggleStatus('${currentView}', ${globalIdx})" class="${statusClass}">${cell === 'TRUE' ? 'เสร็จแล้ว' : cell}</button></td>` : `<td>${cell || '-'}</td>`).join('')}
+                    <td class="text-right"><div class="flex justify-end gap-3"><button onclick="editRow('${currentView}', ${globalIdx})" class="text-sky-400 opacity-0 group-hover:opacity-100 font-bold text-xs">แก้ไข</button><button onclick="deleteRow('${currentView}', ${globalIdx})" class="text-slate-200 group-hover:text-rose-400 font-bold text-xs">ลบ</button></div></td>
                 </tr>`;
-            }).join('');
+            }).join('') || `<tr><td colspan="10" class="text-center py-24 text-slate-300 font-medium italic">ยังไม่มีข้อมูลในส่วนนี้</td></tr>`;
+            
+            let pBtns = ''; if (totalPages > 1) {
+                pBtns += `<button onclick="changePage(${currentPage - 1})" class="${currentPage === 1 ? 'opacity-30 pointer-events-none' : ''} px-3 py-1 rounded-lg border border-orange-100 text-orange-400 text-[10px] font-bold">ก่อนหน้า</button>`;
+                for (let i = 1; i <= totalPages; i++) pBtns += `<button onclick="changePage(${i})" class="w-8 h-8 rounded-lg border text-[10px] font-bold ${i === currentPage ? 'bg-orange-500 text-white' : 'text-slate-400'}">${i}</button>`;
+                pBtns += `<button onclick="changePage(${currentPage + 1})" class="${currentPage === totalPages ? 'opacity-30 pointer-events-none' : ''} px-3 py-1 rounded-lg border border-orange-100 text-orange-400 text-[10px] font-bold">ถัดไป</button>`;
+            }
+            controls.innerHTML = pBtns;
         }
 
+        function changePage(p) { currentPage = p; renderTable(); }
         function updateStats() {
-            const total = getFilteredData(rawData.orders).reduce((s, x) => s + (parseInt(x[3]) || 0), 0);
-            document.getElementById('stats-grid').innerHTML = `
-                <div class="card p-6 soft-shadow h-32 bg-orange-50/30 border border-orange-100"><p class="text-[9px] font-black text-slate-400 uppercase tracking-widest">ผลิตรวม</p><h4 class="text-2xl font-black text-orange-500">${total.toLocaleString()}</h4></div>
-                <div class="card p-6 soft-shadow h-32 bg-rose-50/30 border border-rose-100"><p class="text-[9px] font-black text-slate-400 uppercase tracking-widest">งานเสีย</p><h4 class="text-2xl font-black text-rose-500">${getFilteredData(rawData.redo).reduce((s, x) => s + (parseInt(x[3]) || 0), 0)}</h4></div>
-                <div class="card p-6 soft-shadow h-32 bg-sky-50/30 border border-sky-100"><p class="text-[9px] font-black text-slate-400 uppercase tracking-widest">งานค้างแก้</p><h4 class="text-2xl font-black text-sky-500">${getFilteredData(rawData.fix).filter(x => x[x.length-2] !== 'เสร็จแล้ว').length}</h4></div>
-            `;
+            const o = getFilteredData(rawData.orders); const r = getFilteredData(rawData.redo); const f = getFilteredData(rawData.fix);
+            const total = o.reduce((s, x) => s + (parseInt(x[3]) || 0), 0);
+            const totalRedo = r.reduce((s, x) => s + (parseInt(x[3]) || 0), 0);
+            const pending = f.filter(x => x[x.length-1] !== 'เสร็จแล้ว' && x[x.length-1] !== 'TRUE').length;
+            const items = [{ label: "ผลิตรวมทั้งหมด", val: total.toLocaleString(), color: "text-orange-500", bg: "bg-orange-50" },{ label: "งานเสียรวม", val: totalRedo.toLocaleString(), color: "text-rose-500", bg: "bg-rose-50" },{ label: "รายการที่ยังไม่เสร็จ", val: pending, color: "text-sky-500", bg: "bg-sky-50" }];
+            document.getElementById('stats-grid').innerHTML = items.map(s => `<div class="card p-6 soft-shadow flex flex-col justify-between h-32 relative overflow-hidden group hover:scale-[1.03]"><div class="absolute -right-2 -bottom-2 w-12 h-12 ${s.bg} rounded-full opacity-20 group-hover:scale-150 transition-transform duration-500"></div><p class="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] relative z-10">${s.label}</p><h4 class="text-2xl font-black ${s.color} relative z-10">${s.val}</h4></div>`).join('');
         }
 
         function refreshOverview() {
             updateStats();
             Object.values(charts).forEach(c => c && c.destroy());
-            // (ส่วนโค้ดกราฟจะยังคงทำงานปกติด้วยข้อมูลจาก Cloud)
+            const orders = getFilteredData(rawData.orders);
+            const redo = getFilteredData(rawData.redo);
+            const fix = getFilteredData(rawData.fix);
+            const labels = []; for (let h = 8; h <= 23; h++) labels.push(`${h.toString().padStart(2, '0')}:30`);
+            const getBucket = (t) => { 
+                if(!t) return null; 
+                let timePart = t;
+                if (t.includes('"')) timePart = t.replace(/"/g, '').split(',')[1]?.trim() || t;
+                const p = timePart.split(':'); 
+                const h = parseInt(p[0]); const m = parseInt(p[1]); 
+                if (isNaN(h) || h < 8 || (h === 8 && m < 30)) return null; 
+                return `${h.toString().padStart(2, '0')}:30`; 
+            };
+            const depts = CONFIG.orders.fields.find(f => f.name === 'dept').options;
+            const hrMap = {}; orders.forEach(r => { const b = getBucket(r[1]); if (!b) return; const d = r[4]; const v = parseInt(r[3]) || 0; if(!hrMap[b]) hrMap[b] = {}; hrMap[b][d] = (hrMap[b][d] || 0) + v; });
+            const deptDatasets = depts.map((d, i) => { const colors = [themeColors.orange, themeColors.blue, themeColors.indigo, themeColors.amber, themeColors.rose]; return { label: d, data: labels.map(l => (hrMap[l] && hrMap[l][d]) || 0), borderColor: colors[i % colors.length], backgroundColor: colors[i % colors.length] + '22', borderWidth: 2, fill: true, tension: 0.3 } });
+            charts.ovOrder = new Chart(document.getElementById('ovOrderChart'), { type: 'line', data: { labels: labels, datasets: deptDatasets }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { boxWidth: 8, font: { size: 10 } } } }, scales: { y: { stacked: true, grid: { color: '#f8fafc' } }, x: { grid: { borderDash: [2, 2] }, ticks: { font: {size: 9} } } } } });
+            const redoHrMap = {}; redo.forEach(r => { const b = getBucket(r[1]); if (b) redoHrMap[b] = (redoHrMap[b] || 0) + (parseInt(r[3]) || 0); });
+            const fixHrMap = {}; fix.forEach(r => { const b = getBucket(r[1]); if (b) fixHrMap[b] = (fixHrMap[b] || 0) + 1; });
+            charts.ovFixRedo = new Chart(document.getElementById('ovFixRedoChart'), { type: 'bar', data: { labels: labels, datasets: [{ label: 'งานเสีย (ชิ้น)', data: labels.map(l => redoHrMap[l] || 0), backgroundColor: themeColors.rose, borderRadius: 4 },{ label: 'งานแก้ (รายการ)', data: labels.map(l => fixHrMap[l] || 0), backgroundColor: themeColors.indigo, borderRadius: 4 }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { boxWidth: 8, font: { size: 10 } } } }, scales: { y: { grid: { color: '#f8fafc' } }, x: { grid: { display: false }, ticks: { font: {size: 9} } } } } });
+            const pOrders = orders.filter(o => o[o.length-1] !== 'เสร็จแล้ว' && o[o.length-1] !== 'TRUE').map(o => ({ t: 'งานผลิต', id: o[2], d: o[0], h: o[1], s: o[o.length-1], c: 'text-orange-400', raw: o, view: 'orders' }));
+            const pFix = fix.filter(f => f[f.length-1] !== 'เสร็จแล้ว' && f[f.length-1] !== 'TRUE').map(f => ({ t: 'งานแก้', id: f[4] || f[3], d: f[0], h: f[1], s: f[f.length-1], c: 'text-indigo-400', raw: f, view: 'fix' }));
+            const pRedo = redo.filter(r => r[r.length-1] !== 'เสร็จแล้ว' && r[r.length-1] !== 'TRUE').map(r => ({ t: 'งานเสีย', id: r[2], d: r[0], h: r[1], s: r[r.length-1], c: 'text-rose-400', raw: r, view: 'redo' }));
+            const pProblems = getFilteredData(rawData.problems).filter(p => p[p.length-1] !== 'เสร็จแล้ว').map(p => ({ t: 'ปัญหา', id: p[2], d: p[0], h: p[1], s: p[p.length-1], c: 'text-amber-400', raw: p, view: 'problems' }));
+            const allPending = [...pOrders, ...pFix, ...pRedo, ...pProblems].sort((a,b) => parseDate(b.d, b.h) - parseDate(a.d, a.h)).slice(0, 10);
+            document.getElementById('ovRecentList').innerHTML = allPending.map(i => `<div class="px-8 py-4 flex justify-between items-center bg-white hover:bg-orange-50/20 transition-all">
+                <div class="flex flex-col"><span class="text-[9px] font-black ${i.c} tracking-widest uppercase">${i.t} #${i.id}</span><span class="text-[10px] text-slate-300 font-bold">${i.d} @ ${i.h}</span></div>
+                <button onclick="directToggleStatus('${i.view}', '${i.id}')" class="px-3 py-1 bg-orange-50 text-orange-500 text-[9px] font-black rounded-lg uppercase">กำลังทำ</button>
+            </div>`).join('') || '<div class="py-16 text-center text-slate-200 text-[10px] font-black uppercase">ไม่มีรายการงานคงค้าง</div>';
         }
 
-        // --- Firebase Real-time Sync ---
-        function initSync(col) {
-            onSnapshot(collection(db, col), (snap) => {
-                rawData[col] = snap.docs.map(doc => [...doc.data().entry, doc.id]);
-                if (currentView === 'overview') refreshOverview();
-                else if (currentView === col) { renderTable(); updateStats(); }
-            });
+        function directToggleStatus(view, id) {
+            const row = rawData[view].find(r => r[2] == id || r[3] == id || r[4] == id);
+            if(row) toggleStatus(view, [...getFilteredData(rawData[view])].sort((a,b) => parseDate(b[0],b[1]) - parseDate(a[0],a[1])).indexOf(row));
         }
 
-        window.onload = () => {
-            ['orders', 'fix', 'redo', 'problems'].forEach(initSync);
+        function filterTableSearch() { const q = document.getElementById('search').value.toLowerCase(); document.querySelectorAll('#table-body tr').forEach(r => r.style.display = r.innerText.toLowerCase().includes(q) ? '' : 'none'); }
+
+        async function handleFiles(e) {
+            if (!user) return;
+            const files = Array.from(e.target.files);
+            for (const file of files) {
+                const reader = new FileReader();
+                reader.onload = async (ev) => {
+                    const lines = ev.target.result.split('\n').filter(l => l.trim());
+                    const header = lines[0].toLowerCase();
+                    const data = lines.slice(1).map(l => {
+                        // Regex to handle CSV with commas inside quotes correctly
+                        const matches = l.match(/(".*?"|[^,]+)(?=\s*,|\s*$)/g);
+                        return matches ? matches.map(m => m.trim().replace(/^"|"$/g, '')) : l.split(',').map(c => c.trim().replace(/^"|"$/g, ''));
+                    });
+                    
+                    let targetCol = "";
+                    if (header.includes('แผนก') || header.includes('สีของงาน')) targetCol = "orders";
+                    else if (header.includes('sku') || header.includes('รูปที่')) targetCol = "fix";
+                    else if (header.includes('ครั้งที่')) targetCol = "redo";
+                    
+                    if (targetCol) {
+                        showToast(`กำลังอัปโหลด ${file.name}...`, 'info');
+                        for (const row of data) {
+                            let cleanRow = [...row];
+                            
+                            // Special handling for "งานแก้" (fix) page because date and time are in one column
+                            if (targetCol === "fix" && cleanRow[0].includes(',')) {
+                                const dtParts = cleanRow[0].split(',');
+                                const dateStr = dtParts[0].trim();
+                                const timeStr = dtParts[1].trim();
+                                // Reconstruct: [Date, Time, ...rest of data]
+                                cleanRow = [dateStr, timeStr, ...row.slice(1)];
+                            }
+
+                            await addDoc(collection(db, 'artifacts', appId, 'public', 'data', targetCol), { data: cleanRow, timestamp: new Date() });
+                        }
+                        showToast(`อัปโหลด ${file.name} สำเร็จ`, 'success');
+                    } else {
+                        showAlert("ไม่รองรับไฟล์นี้", "ไม่พบหัวข้อที่ตรงกับระบบ กรุณาตรวจสอบไฟล์ .csv ของคุณ");
+                    }
+                };
+                reader.readAsText(file);
+            }
+        }
+
+        function exportAllData() {
+            let csv = "\ufeffType,Date,Time,Val1,Val2,Val3,Val4,Val5,Status\n";
+            Object.keys(rawData).forEach(k => rawData[k].forEach(r => csv += `${k.toUpperCase()},${r.join(',')}\n`));
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement("a"); link.href = URL.createObjectURL(blob); link.download = `Cloud_Report_WARROOM.csv`; link.click();
+        }
+
+        window.onload = async () => {
+            await initAuth();
             switchView('overview');
-            setTimeout(() => showToast("เชื่อมต่อ Cloud สำเร็จ"), 1000);
         };
-
-        window.setTimeFilter = (f) => { currentTimeFilter = f; if (currentView === 'overview') refreshOverview(); else { renderTable(); updateStats(); } };
     </script>
 </body>
 </html>
