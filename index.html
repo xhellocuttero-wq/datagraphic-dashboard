@@ -93,6 +93,33 @@
         .view-animate {
             animation: viewEntrance 0.4s cubic-bezier(0.25, 1, 0.5, 1) forwards;
         }
+
+        /* Hide Default Date Picker UI */
+        .datepicker-wrapper {
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .datepicker-wrapper:hover { background: #fff7ed; }
+        .datepicker-wrapper input[type="date"] {
+            position: absolute;
+            opacity: 0;
+            width: 100%;
+            height: 100%;
+            cursor: pointer;
+            z-index: 2;
+        }
+        .datepicker-wrapper svg {
+            position: relative;
+            z-index: 1;
+            color: #fb923c;
+        }
     </style>
 </head>
 <body class="flex h-screen overflow-hidden">
@@ -152,10 +179,16 @@
                 <p id="view-desc" class="text-sm text-slate-400 font-medium">ภาพรวมข้อมูลการผลิตและประสิทธิภาพรายแผนก</p>
             </div>
             
-            <div class="flex p-1.5 bg-white rounded-2xl soft-shadow border border-orange-50">
+            <div class="flex flex-wrap items-center p-1.5 bg-white rounded-2xl soft-shadow border border-orange-50 gap-1">
                 <button onclick="setTimeFilter('daily')" id="filter-daily" class="filter-btn active">วันนี้</button>
                 <button onclick="setTimeFilter('monthly')" id="filter-monthly" class="filter-btn">เดือนนี้</button>
                 <button onclick="setTimeFilter('all')" id="filter-all" class="filter-btn">ทั้งหมด</button>
+                <div class="h-6 w-[1px] bg-orange-100 mx-1"></div>
+                <!-- Changed: Date Picker to Icon -->
+                <div class="datepicker-wrapper" title="เลือกวันที่">
+                    <input type="date" id="custom-date-filter" onchange="setTimeFilter('custom', this.value)">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                </div>
             </div>
         </div>
 
@@ -178,23 +211,30 @@
                 <!-- Fix & Redo Mixed Chart -->
                 <div class="card p-8 soft-shadow bg-white relative overflow-hidden">
                     <div class="flex justify-between items-center mb-6">
-                        <h3 class="text-[10px] font-black text-rose-400 uppercase tracking-widest">กราฟงานแก้และงานเสีย</h3>
-                        <div id="fix-type-summary" class="flex gap-2 text-[8px] font-bold"></div>
+                        <h3 class="text-[10px] font-black text-rose-400 uppercase tracking-widest">กราฟงานเสียรายชั่วโมง</h3>
                     </div>
                     <div class="h-[250px]"><canvas id="ovFixRedoChart"></canvas></div>
                 </div>
             </div>
-            
-            <div class="grid grid-cols-1 gap-8">
-                <!-- Pending Tasks List -->
-                <div class="card overflow-hidden soft-shadow">
+
+            <!-- New: Fix Types Pie Chart Section -->
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                <div class="card p-8 soft-shadow bg-white lg:col-span-1 flex flex-col items-center justify-center">
+                    <h3 class="text-[10px] font-black text-indigo-400 uppercase tracking-widest mb-6 w-full text-left">สัดส่วนประเภทงานแก้</h3>
+                    <div class="w-full h-[220px] flex items-center justify-center">
+                        <canvas id="ovFixTypePieChart"></canvas>
+                    </div>
+                </div>
+
+                <!-- Pending Tasks List (Adjusted Grid Span) -->
+                <div class="card overflow-hidden soft-shadow lg:col-span-2">
                     <div class="px-8 py-5 border-b border-orange-50 flex justify-between items-center bg-orange-50/20">
                         <h3 class="text-[10px] font-black text-slate-400 uppercase tracking-widest">รายการที่ยังไม่เสร็จ (ล่าสุด)</h3>
                         <div class="flex gap-1">
                             <div class="w-1.5 h-1.5 rounded-full bg-orange-300 animate-pulse"></div>
                         </div>
                     </div>
-                    <div id="ovRecentList" class="divide-y divide-orange-50/50"></div>
+                    <div id="ovRecentList" class="divide-y divide-orange-50/50 max-h-[220px] overflow-y-auto"></div>
                 </div>
             </div>
         </div>
@@ -260,11 +300,20 @@
         let rawData = { orders: [], fix: [], redo: [], problems: [] };
         let currentView = 'overview';
         let currentTimeFilter = 'daily'; 
+        let customDateValue = null;
         let currentPage = 1;
         const itemsPerPage = 60;
         let charts = {};
         let editingRealIdx = -1;
         let user = null;
+
+        // Sticky memory for form fields
+        let stickyValues = {
+            orders: { dept: 'งานเรียง', color: 'สีแดง' },
+            fix: { type: 'ผิดลาย' },
+            redo: {},
+            problems: { issue: 'ปัญหากันคน' }
+        };
 
         const CONFIG = {
             overview: { title: "สรุปผลการทำงาน", desc: "ภาพรวมข้อมูลการผลิตและประสิทธิภาพรายแผนก" },
@@ -284,12 +333,12 @@
                 title: "รายการงานแก้", desc: "ติดตามรายการที่ต้องแก้ไข",
                 cols: ['วันที่และเวลา', 'รูปที่', 'ประเภท', 'รหัส SKU', 'รหัสออเดอร์', 'สถานะ'],
                 fields: [
-                    { name: 'date', label: 'วันที่', type: 'date' },
-                    { name: 'time', label: 'เวลา', type: 'time' },
+                    { name: 'datetime', label: 'วันที่และเวลา', type: 'datetime-local' },
+                    { name: 'photo_no', label: 'รูปที่', type: 'number' },
                     { name: 'type', label: 'ประเภทงานแก้', type: 'select', options: ['ผิดลาย', 'ผิดสี', 'ผิดตำแหน่ง', 'ผิดขนาด', 'อื่น'] },
                     { name: 'sku', label: 'SKU', type: 'text' },
                     { name: 'orderid', label: 'รหัสออเดอร์', type: 'text' },
-                    { name: 'remark', label: 'หมายเหตุ', type: 'text', optional: true }
+                    { name: 'note', label: 'หมายเหตุ', type: 'text', optional: true }
                 ]
             },
             redo: { 
@@ -379,14 +428,32 @@
 
         function speak(text) { if ('speechSynthesis' in window) { const msg = new SpeechSynthesisUtterance(text); msg.lang = 'th-TH'; msg.rate = 1.1; window.speechSynthesis.speak(msg); } }
         function showAlert(title, msg) { document.getElementById('alert-title').innerText = title; document.getElementById('alert-msg').innerText = msg; document.getElementById('alert-modal').classList.remove('hidden'); speak(msg); }
+        
         function parseDate(d, t) { 
             if (!d) return new Date(0); 
+            // Handle combined Date/Time format for Fix view
+            if (d.includes(',')) {
+                let dtStr = d.replace(/"/g, '');
+                // Try converting "DD/MM/YYYY, HH:MM:SS" to a format JS Date understands better
+                const parts = dtStr.split(',');
+                if (parts.length === 2) {
+                    const dParts = parts[0].trim().split('/');
+                    if (dParts.length === 3) {
+                        let year = parseInt(dParts[2]);
+                        if (year > 2500) year -= 543;
+                        return new Date(`${year}-${dParts[1].padStart(2,'0')}-${dParts[0].padStart(2,'0')}T${parts[1].trim()}`);
+                    }
+                }
+                return new Date(dtStr);
+            }
             let dateStr = d;
-            if (d.includes('"')) dateStr = d.replace(/"/g, '').split(',')[0].trim();
             const p = dateStr.split('/');
             const tp = (t || "00:00:00").split(':'); 
             if (p.length < 3) return new Date(0); 
-            return new Date(p[2].length === 2 ? '20' + p[2] : p[2], p[1]-1, p[0], tp[0], tp[1], tp[2]); 
+            // Support Thai Buddhist Year if present (e.g., 2568)
+            let year = parseInt(p[2]);
+            if (year > 2500) year -= 543; 
+            return new Date(year, p[1]-1, p[0], tp[0], tp[1], tp[2]); 
         }
 
         function getFilteredData(arr) {
@@ -396,15 +463,29 @@
                 const rd = parseDate(r[0], r[1]);
                 if (currentTimeFilter === 'daily') return rd.toDateString() === now.toDateString();
                 if (currentTimeFilter === 'monthly') return rd.getMonth() === now.getMonth() && rd.getFullYear() === now.getFullYear();
+                if (currentTimeFilter === 'custom' && customDateValue) {
+                    const target = new Date(customDateValue);
+                    return rd.toDateString() === target.toDateString();
+                }
                 return true;
             });
         }
 
-        function setTimeFilter(f) {
-            currentTimeFilter = f; currentPage = 1; 
+        function setTimeFilter(f, val = null) {
+            currentTimeFilter = f; 
+            customDateValue = val;
+            currentPage = 1; 
+            
             document.querySelectorAll('.filter-btn').forEach(b => b.classList.toggle('active', b.id === `filter-${f}`));
+            
+            let toastMsg = "";
+            if (f === 'daily') toastMsg = "กรองข้อมูล: วันนี้";
+            else if (f === 'monthly') toastMsg = "กรองข้อมูล: เดือนนี้";
+            else if (f === 'all') toastMsg = "กรองข้อมูล: ทั้งหมด";
+            else if (f === 'custom') toastMsg = `กรองข้อมูล: วันที่ ${val}`;
+
             if (currentView === 'overview') refreshOverview(); else { renderTable(); updateStats(); }
-            showToast(`กรองข้อมูล: ${f === 'daily' ? 'วันนี้' : (f === 'monthly' ? 'เดือนนี้' : 'ทั้งหมด')}`, 'info');
+            showToast(toastMsg, 'info');
         }
 
         function switchView(v) {
@@ -429,16 +510,26 @@
         function renderForm(v) {
             const form = document.getElementById('main-form');
             const container = document.getElementById('form-container');
-            const now = new Date(); const today = now.toISOString().split('T')[0];
+            const now = new Date(); 
+            const today = now.toISOString().split('T')[0];
             const nowTime = now.toTimeString().split(' ')[0].substring(0, 5);
             const isEditing = editingRealIdx > -1;
             container.className = isEditing ? "card p-8 soft-shadow bg-sky-50/30 border-sky-200 border-2" : "card p-8 soft-shadow bg-white border-orange-100 border-dashed border-2";
-            form.innerHTML = CONFIG[v].fields.map(f => `
+            
+            form.innerHTML = CONFIG[v].fields.map(f => {
+                let defaultValue = "";
+                if (f.name === 'date') defaultValue = today;
+                else if (f.name === 'time') defaultValue = nowTime;
+                else if (f.name === 'datetime') defaultValue = now.toISOString().slice(0,16);
+                else if (stickyValues[v] && stickyValues[v][f.name]) defaultValue = stickyValues[v][f.name];
+
+                return `
                 <div class="flex flex-col gap-2">
                     <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest">${f.label}${f.optional ? ' (เลือกได้)' : ''}</label>
-                    ${f.type === 'select' ? `<select name="${f.name}" id="field-${f.name}" class="input-clean bg-slate-50/50">${f.options.map(o => `<option value="${o}">${o}</option>`).join('')}</select>` 
-                    : `<input type="${f.type}" name="${f.name}" id="field-${f.name}" value="${f.name === 'date' ? today : (f.name === 'time' ? nowTime : '')}" ${f.optional ? '' : 'required'} class="input-clean">`}
-                </div>`).join('') + `
+                    ${f.type === 'select' ? `<select name="${f.name}" id="field-${f.name}" class="input-clean bg-slate-50/50">${f.options.map(o => `<option value="${o}" ${o === defaultValue ? 'selected' : ''}>${o}</option>`).join('')}</select>` 
+                    : `<input type="${f.type}" name="${f.name}" id="field-${f.name}" value="${defaultValue}" ${f.optional ? '' : 'required'} class="input-clean">`}
+                </div>`;
+            }).join('') + `
             <div class="flex gap-2">
                 <button type="submit" class="${isEditing ? 'bg-sky-500 hover:bg-sky-600' : 'bg-orange-500 hover:bg-orange-600'} text-white font-bold py-2.5 px-4 rounded-xl text-sm transition-all shadow-lg shadow-orange-100 mt-2 flex-1 hover:scale-[1.02] active:scale-[0.98]">
                     ${isEditing ? 'อัปเดตรายการ' : 'บันทึก'}
@@ -454,11 +545,28 @@
             if (!user) return;
             const fd = new FormData(e.target);
             const dataObj = Object.fromEntries(fd.entries());
-            const dateParts = dataObj.date.split('-');
-            const dateStr = `${dateParts[2]}/${dateParts[1]}/${dateParts[0]}`;
-            let timeStr = dataObj.time; if (timeStr.split(':').length === 2) timeStr += ":00";
-            const entry = [dateStr, timeStr];
-            CONFIG[currentView].fields.forEach(f => { if (f.name !== 'date' && f.name !== 'time') entry.push(dataObj[f.name]); });
+            
+            // Save sticky values for select fields to remember them for next entry
+            CONFIG[currentView].fields.forEach(f => {
+                if (f.type === 'select') {
+                    if (!stickyValues[currentView]) stickyValues[currentView] = {};
+                    stickyValues[currentView][f.name] = dataObj[f.name];
+                }
+            });
+
+            let entry = [];
+
+            if (currentView === 'fix') {
+                const dt = new Date(dataObj.datetime);
+                const dtStr = `${dt.getDate()}/${dt.getMonth()+1}/${dt.getFullYear()}, ${dt.getHours()}:${dt.getMinutes().toString().padStart(2,'0')}:${dt.getSeconds().toString().padStart(2,'0')}`;
+                entry = [dtStr, dataObj.photo_no, dataObj.type, dataObj.sku, dataObj.orderid, dataObj.note || '-'];
+            } else {
+                const dateParts = dataObj.date.split('-');
+                const dateStr = `${dateParts[2]}/${dateParts[1]}/${dateParts[0]}`;
+                let timeStr = dataObj.time; if (timeStr.split(':').length === 2) timeStr += ":00";
+                entry = [dateStr, timeStr];
+                CONFIG[currentView].fields.forEach(f => { if (f.name !== 'date' && f.name !== 'time') entry.push(dataObj[f.name]); });
+            }
             
             try {
                 if (editingRealIdx > -1) {
@@ -481,6 +589,7 @@
                     showToast("บันทึกข้อมูลใหม่แล้ว");
                     speak("บันทึกรายการสำเร็จค่ะ");
                 }
+                // Refresh form with sticky values
                 renderForm(currentView);
             } catch (err) { console.error(err); }
         }
@@ -491,7 +600,7 @@
             const targetRow = allInView[globalIdx];
             if (!targetRow) return;
 
-            let nextStatus = targetRow[targetRow.length - 1] === 'เสร็จแล้ว' ? 'กำลังทำ' : 'เสร็จแล้ว';
+            let nextStatus = targetRow[targetRow.length - 1] === 'เสร็จแล้ว' || targetRow[targetRow.length - 1] === 'TRUE' ? 'กำลังทำ' : 'เสร็จแล้ว';
             const updatedRow = [...targetRow];
             updatedRow[updatedRow.length - 1] = nextStatus;
 
@@ -524,18 +633,34 @@
             const target = allSortedData[globalIdx];
             editingRealIdx = globalIdx;
             renderForm(v);
-            let dateStr = target[0];
-            if (dateStr.includes('"')) dateStr = dateStr.replace(/"/g, '').split(',')[0].trim();
-            const dParts = dateStr.split('/');
-            const yr = dParts[2].length === 2 ? '20'+dParts[2] : dParts[2];
-            document.getElementById('field-date').value = `${yr}-${dParts[1].padStart(2, '0')}-${dParts[0].padStart(2, '0')}`;
-            document.getElementById('field-time').value = target[1].substring(0, 5);
-            CONFIG[v].fields.forEach((f, fIdx) => {
-                if (f.name !== 'date' && f.name !== 'time') {
-                    const input = document.getElementById(`field-${f.name}`);
-                    if (input) input.value = target[fIdx + 2] || '';
+            
+            if (v === 'fix') {
+                const dt = parseDate(target[0]);
+                if (isNaN(dt.getTime())) {
+                    console.error("Invalid Date parsed:", target[0]);
+                    return;
                 }
-            });
+                const localStr = new Date(dt.getTime() - (dt.getTimezoneOffset() * 60000)).toISOString().slice(0, 16);
+                document.getElementById('field-datetime').value = localStr;
+                document.getElementById('field-photo_no').value = target[1];
+                document.getElementById('field-type').value = target[2];
+                document.getElementById('field-sku').value = target[3];
+                document.getElementById('field-orderid').value = target[4];
+                if (document.getElementById('field-note')) document.getElementById('field-note').value = target[5] === '-' ? '' : target[5];
+            } else {
+                let dateStr = target[0];
+                const dParts = dateStr.split('/');
+                let yr = parseInt(dParts[2]);
+                if (yr > 2500) yr -= 543;
+                document.getElementById('field-date').value = `${yr}-${dParts[1].padStart(2, '0')}-${dParts[0].padStart(2, '0')}`;
+                document.getElementById('field-time').value = target[1].substring(0, 5);
+                CONFIG[v].fields.forEach((f, fIdx) => {
+                    if (f.name !== 'date' && f.name !== 'time') {
+                        const input = document.getElementById(`field-${f.name}`);
+                        if (input) input.value = target[fIdx + 2] || '';
+                    }
+                });
+            }
             document.querySelector('main').scrollTo({ top: 0, behavior: 'smooth' });
         }
 
@@ -557,9 +682,47 @@
                 const statusIndex = row.length - 1;
                 const statusVal = row[statusIndex];
                 let statusClass = "px-3 py-1 rounded-full text-[10px] font-bold transition-all " + (statusVal === 'เสร็จแล้ว' || statusVal === 'TRUE' ? "bg-emerald-50 text-emerald-500" : "bg-orange-50 text-orange-500");
+                
+                // --- CUSTOM RENDER LOGIC FOR FIX VIEW ---
+                let rowHtml = '';
+                if (currentView === 'fix') {
+                    // Manual indexing to skip the Note column (index 5)
+                    // cols: ['วันที่และเวลา', 'รูปที่', 'ประเภท', 'รหัส SKU', 'รหัสออเดอร์', 'สถานะ']
+                    // row: [0:date, 1:photo, 2:type, 3:sku, 4:orderid, 5:note, 6:status]
+                    rowHtml += `<td>${row[0] || '-'}</td>`;
+                    rowHtml += `<td>${row[1] || '-'}</td>`;
+                    rowHtml += `<td>${row[2] || '-'}</td>`;
+                    rowHtml += `<td>${row[3] || '-'}</td>`;
+                    rowHtml += `<td>${row[4] || '-'}</td>`;
+                    rowHtml += `<td><button onclick="toggleStatus('${currentView}', ${globalIdx})" class="${statusClass}">${statusVal === 'TRUE' ? 'เสร็จแล้ว' : statusVal}</button></td>`;
+                } else {
+                    // Standard loop for other views
+                    row.forEach((cell, cIdx) => {
+                        if (cIdx === statusIndex) {
+                            rowHtml += `<td><button onclick="toggleStatus('${currentView}', ${globalIdx})" class="${statusClass}">${statusVal === 'TRUE' ? 'เสร็จแล้ว' : cell}</button></td>`;
+                        } else {
+                            rowHtml += `<td>${cell || '-'}</td>`;
+                        }
+                    });
+                }
+
+                // Prepare note for management column (only for Fix view)
+                let noteHtml = '';
+                if (currentView === 'fix' && row[5] && row[5] !== '-') {
+                   noteHtml = `<div class="text-[10px] text-slate-400 font-medium italic truncate max-w-[120px]" title="${row[5]}">${row[5]}</div>`;
+                }
+
                 return `<tr class="group animate-in fade-in duration-300">
-                    ${row.map((cell, cIdx) => cIdx === statusIndex ? `<td><button onclick="toggleStatus('${currentView}', ${globalIdx})" class="${statusClass}">${cell === 'TRUE' ? 'เสร็จแล้ว' : cell}</button></td>` : `<td>${cell || '-'}</td>`).join('')}
-                    <td class="text-right"><div class="flex justify-end gap-3"><button onclick="editRow('${currentView}', ${globalIdx})" class="text-sky-400 opacity-0 group-hover:opacity-100 font-bold text-xs">แก้ไข</button><button onclick="deleteRow('${currentView}', ${globalIdx})" class="text-slate-200 group-hover:text-rose-400 font-bold text-xs">ลบ</button></div></td>
+                    ${rowHtml}
+                    <td class="text-right">
+                        <div class="flex flex-col items-end gap-1">
+                            <div class="flex justify-end gap-3">
+                                <button onclick="editRow('${currentView}', ${globalIdx})" class="text-sky-400 opacity-0 group-hover:opacity-100 font-bold text-xs">แก้ไข</button>
+                                <button onclick="deleteRow('${currentView}', ${globalIdx})" class="text-slate-200 group-hover:text-rose-400 font-bold text-xs">ลบ</button>
+                            </div>
+                            ${noteHtml}
+                        </div>
+                    </td>
                 </tr>`;
             }).join('') || `<tr><td colspan="10" class="text-center py-24 text-slate-300 font-medium italic">ยังไม่มีข้อมูลในส่วนนี้</td></tr>`;
             
@@ -588,29 +751,72 @@
             const redo = getFilteredData(rawData.redo);
             const fix = getFilteredData(rawData.fix);
             const labels = []; for (let h = 8; h <= 23; h++) labels.push(`${h.toString().padStart(2, '0')}:30`);
+            
             const getBucket = (t) => { 
                 if(!t) return null; 
-                let timePart = t;
-                if (t.includes('"')) timePart = t.replace(/"/g, '').split(',')[1]?.trim() || t;
-                const p = timePart.split(':'); 
+                let timeStr = t;
+                if (t.includes(',')) timeStr = t.split(',')[1].trim();
+                const p = timeStr.split(':'); 
                 const h = parseInt(p[0]); const m = parseInt(p[1]); 
                 if (isNaN(h) || h < 8 || (h === 8 && m < 30)) return null; 
                 return `${h.toString().padStart(2, '0')}:30`; 
             };
-            const depts = CONFIG.orders.fields.find(f => f.name === 'dept').options;
+
+            const depts = ['งานเรียง', 'งานล็อต', 'งานBY', 'งานเฉินผิง', 'งานด่วน'];
             const hrMap = {}; orders.forEach(r => { const b = getBucket(r[1]); if (!b) return; const d = r[4]; const v = parseInt(r[3]) || 0; if(!hrMap[b]) hrMap[b] = {}; hrMap[b][d] = (hrMap[b][d] || 0) + v; });
             const deptDatasets = depts.map((d, i) => { const colors = [themeColors.orange, themeColors.blue, themeColors.indigo, themeColors.amber, themeColors.rose]; return { label: d, data: labels.map(l => (hrMap[l] && hrMap[l][d]) || 0), borderColor: colors[i % colors.length], backgroundColor: colors[i % colors.length] + '22', borderWidth: 2, fill: true, tension: 0.3 } });
             charts.ovOrder = new Chart(document.getElementById('ovOrderChart'), { type: 'line', data: { labels: labels, datasets: deptDatasets }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { boxWidth: 8, font: { size: 10 } } } }, scales: { y: { stacked: true, grid: { color: '#f8fafc' } }, x: { grid: { borderDash: [2, 2] }, ticks: { font: {size: 9} } } } } });
+            
             const redoHrMap = {}; redo.forEach(r => { const b = getBucket(r[1]); if (b) redoHrMap[b] = (redoHrMap[b] || 0) + (parseInt(r[3]) || 0); });
-            const fixHrMap = {}; fix.forEach(r => { const b = getBucket(r[1]); if (b) fixHrMap[b] = (fixHrMap[b] || 0) + 1; });
+            const fixHrMap = {}; 
+            const fixTypeMap = {}; 
+            fix.forEach(r => { 
+                const b = getBucket(r[0]); if (b) fixHrMap[b] = (fixHrMap[b] || 0) + 1; 
+                const type = r[2]; if (type) fixTypeMap[type] = (fixTypeMap[type] || 0) + 1;
+            });
+            
+            // Fix & Redo Bar Chart
             charts.ovFixRedo = new Chart(document.getElementById('ovFixRedoChart'), { type: 'bar', data: { labels: labels, datasets: [{ label: 'งานเสีย (ชิ้น)', data: labels.map(l => redoHrMap[l] || 0), backgroundColor: themeColors.rose, borderRadius: 4 },{ label: 'งานแก้ (รายการ)', data: labels.map(l => fixHrMap[l] || 0), backgroundColor: themeColors.indigo, borderRadius: 4 }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { boxWidth: 8, font: { size: 10 } } } }, scales: { y: { grid: { color: '#f8fafc' } }, x: { grid: { display: false }, ticks: { font: {size: 9} } } } } });
+
+            // Fix Type Pie Chart
+            const typeLabels = Object.keys(fixTypeMap);
+            const typeValues = Object.values(fixTypeMap);
+            const pieColors = [themeColors.orange, themeColors.blue, themeColors.indigo, themeColors.amber, themeColors.rose, themeColors.teal];
+            
+            charts.ovFixTypePie = new Chart(document.getElementById('ovFixTypePieChart'), {
+                type: 'doughnut',
+                data: {
+                    labels: typeLabels,
+                    datasets: [{
+                        data: typeValues,
+                        backgroundColor: pieColors.slice(0, typeLabels.length),
+                        borderWidth: 0,
+                        hoverOffset: 10
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    cutout: '65%',
+                    plugins: {
+                        legend: {
+                            position: 'right',
+                            labels: {
+                                boxWidth: 10,
+                                font: { size: 10, weight: 'bold' },
+                                padding: 15
+                            }
+                        }
+                    }
+                }
+            });
+            
             const pOrders = orders.filter(o => o[o.length-1] !== 'เสร็จแล้ว' && o[o.length-1] !== 'TRUE').map(o => ({ t: 'งานผลิต', id: o[2], d: o[0], h: o[1], s: o[o.length-1], c: 'text-orange-400', raw: o, view: 'orders' }));
-            const pFix = fix.filter(f => f[f.length-1] !== 'เสร็จแล้ว' && f[f.length-1] !== 'TRUE').map(f => ({ t: 'งานแก้', id: f[4] || f[3], d: f[0], h: f[1], s: f[f.length-1], c: 'text-indigo-400', raw: f, view: 'fix' }));
+            const pFix = fix.filter(f => f[f.length-1] !== 'เสร็จแล้ว' && f[f.length-1] !== 'TRUE').map(f => ({ t: 'งานแก้', id: f[4] || f[3], d: f[0], h: '', s: f[f.length-1], c: 'text-indigo-400', raw: f, view: 'fix' }));
             const pRedo = redo.filter(r => r[r.length-1] !== 'เสร็จแล้ว' && r[r.length-1] !== 'TRUE').map(r => ({ t: 'งานเสีย', id: r[2], d: r[0], h: r[1], s: r[r.length-1], c: 'text-rose-400', raw: r, view: 'redo' }));
-            const pProblems = getFilteredData(rawData.problems).filter(p => p[p.length-1] !== 'เสร็จแล้ว').map(p => ({ t: 'ปัญหา', id: p[2], d: p[0], h: p[1], s: p[p.length-1], c: 'text-amber-400', raw: p, view: 'problems' }));
-            const allPending = [...pOrders, ...pFix, ...pRedo, ...pProblems].sort((a,b) => parseDate(b.d, b.h) - parseDate(a.d, a.h)).slice(0, 10);
+            const allPending = [...pOrders, ...pFix, ...pRedo].sort((a,b) => parseDate(b.d, b.h) - parseDate(a.d, a.h)).slice(0, 10);
             document.getElementById('ovRecentList').innerHTML = allPending.map(i => `<div class="px-8 py-4 flex justify-between items-center bg-white hover:bg-orange-50/20 transition-all">
-                <div class="flex flex-col"><span class="text-[9px] font-black ${i.c} tracking-widest uppercase">${i.t} #${i.id}</span><span class="text-[10px] text-slate-300 font-bold">${i.d} @ ${i.h}</span></div>
+                <div class="flex flex-col"><span class="text-[9px] font-black ${i.c} tracking-widest uppercase">${i.t} #${i.id}</span><span class="text-[10px] text-slate-300 font-bold">${i.d} ${i.h}</span></div>
                 <button onclick="directToggleStatus('${i.view}', '${i.id}')" class="px-3 py-1 bg-orange-50 text-orange-500 text-[9px] font-black rounded-lg uppercase">กำลังทำ</button>
             </div>`).join('') || '<div class="py-16 text-center text-slate-200 text-[10px] font-black uppercase">ไม่มีรายการงานคงค้าง</div>';
         }
@@ -631,35 +837,21 @@
                     const lines = ev.target.result.split('\n').filter(l => l.trim());
                     const header = lines[0].toLowerCase();
                     const data = lines.slice(1).map(l => {
-                        // Regex to handle CSV with commas inside quotes correctly
                         const matches = l.match(/(".*?"|[^,]+)(?=\s*,|\s*$)/g);
                         return matches ? matches.map(m => m.trim().replace(/^"|"$/g, '')) : l.split(',').map(c => c.trim().replace(/^"|"$/g, ''));
                     });
                     
                     let targetCol = "";
                     if (header.includes('แผนก') || header.includes('สีของงาน')) targetCol = "orders";
-                    else if (header.includes('sku') || header.includes('รูปที่')) targetCol = "fix";
+                    else if (header.includes('sku') || header.includes('รูปที่') || header.includes('วันที่และเวลา')) targetCol = "fix";
                     else if (header.includes('ครั้งที่')) targetCol = "redo";
                     
                     if (targetCol) {
                         showToast(`กำลังอัปโหลด ${file.name}...`, 'info');
                         for (const row of data) {
-                            let cleanRow = [...row];
-                            
-                            // Special handling for "งานแก้" (fix) page because date and time are in one column
-                            if (targetCol === "fix" && cleanRow[0].includes(',')) {
-                                const dtParts = cleanRow[0].split(',');
-                                const dateStr = dtParts[0].trim();
-                                const timeStr = dtParts[1].trim();
-                                // Reconstruct: [Date, Time, ...rest of data]
-                                cleanRow = [dateStr, timeStr, ...row.slice(1)];
-                            }
-
-                            await addDoc(collection(db, 'artifacts', appId, 'public', 'data', targetCol), { data: cleanRow, timestamp: new Date() });
+                            await addDoc(collection(db, 'artifacts', appId, 'public', 'data', targetCol), { data: row, timestamp: new Date() });
                         }
                         showToast(`อัปโหลด ${file.name} สำเร็จ`, 'success');
-                    } else {
-                        showAlert("ไม่รองรับไฟล์นี้", "ไม่พบหัวข้อที่ตรงกับระบบ กรุณาตรวจสอบไฟล์ .csv ของคุณ");
                     }
                 };
                 reader.readAsText(file);
