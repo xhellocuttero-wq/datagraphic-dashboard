@@ -7,7 +7,6 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Sarabun:wght@300;400;500;600&display=swap" rel="stylesheet">
-    <!-- Firebase Libraries -->
     <script src="https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js" type="module"></script>
     <script src="https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js" type="module"></script>
     <script src="https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js" type="module"></script>
@@ -21,7 +20,7 @@
             --text-sub: #94a3b8;
         }
         body { 
-            font-family: 'Inter', 'Sarabun', sans-serif; 
+            font-family: 'Inter', 'Sarabun', sans-serif;
             background-color: var(--bg-main); 
             color: var(--text-main);
             transition: all 0.3s ease;
@@ -30,7 +29,7 @@
             box-shadow: 0 10px 25px -5px rgba(251, 146, 60, 0.05), 0 8px 10px -6px rgba(56, 189, 248, 0.03);
         }
         .card { 
-            background: var(--card-bg); 
+            background: var(--card-bg);
             border: 1px solid #f8fafc;
             border-radius: 1.25rem;
             transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
@@ -67,34 +66,42 @@
             outline: none;
             transition: all 0.2s;
         }
-        .input-clean:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(251, 146, 60, 0.1); }
+        .input-clean:focus { border-color: var(--primary);
+        box-shadow: 0 0 0 3px rgba(251, 146, 60, 0.1); }
         
-        th { font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-sub); padding: 14px 24px; border-bottom: 2px solid #fff7ed; }
-        td { padding: 12px 24px; font-size: 14px; border-bottom: 1px solid #fdfcfb; }
-        tr:hover { background: #fffbf7; }
+        th { font-size: 10px;
+        text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-sub); padding: 14px 24px; border-bottom: 2px solid #fff7ed;
+        }
+        td { padding: 12px 24px; font-size: 14px; border-bottom: 1px solid #fdfcfb;
+        }
+        tr:hover { background: #fffbf7;
+        }
 
-        ::-webkit-scrollbar { width: 6px; }
-        ::-webkit-scrollbar-thumb { background: #fed7aa; border-radius: 10px; }
+        ::-webkit-scrollbar { width: 6px;
+        }
+        ::-webkit-scrollbar-thumb { background: #fed7aa; border-radius: 10px;
+        }
 
-        /* Live Feedback Animations */
         @keyframes slideIn {
-            from { transform: translateX(100%); opacity: 0; }
-            to { transform: translateX(0); opacity: 1; }
+            from { transform: translateX(100%);
+            opacity: 0; }
+            to { transform: translateX(0); opacity: 1;
+            }
         }
         .toast {
             animation: slideIn 0.3s ease-out forwards;
         }
 
-        /* View Slide-In Animation */
         @keyframes viewEntrance {
-            0% { transform: translateX(30px); opacity: 0; }
-            100% { transform: translateX(0); opacity: 1; }
+            0% { transform: translateX(30px);
+            opacity: 0; }
+            100% { transform: translateX(0); opacity: 1;
+            }
         }
         .view-animate {
             animation: viewEntrance 0.4s cubic-bezier(0.25, 1, 0.5, 1) forwards;
         }
 
-        /* Hide Default Date Picker UI */
         .datepicker-wrapper {
             position: relative;
             display: flex;
@@ -106,7 +113,8 @@
             cursor: pointer;
             transition: background 0.2s;
         }
-        .datepicker-wrapper:hover { background: #fff7ed; }
+        .datepicker-wrapper:hover { background: #fff7ed;
+        }
         .datepicker-wrapper input[type="date"] {
             position: absolute;
             opacity: 0;
@@ -120,14 +128,14 @@
             z-index: 1;
             color: #fb923c;
         }
+        .check-all-box { width: 16px; height: 16px; accent-color: #fb923c;
+        cursor: pointer; }
     </style>
 </head>
 <body class="flex h-screen overflow-hidden">
 
-    <!-- Toast Notification Container -->
     <div id="toast-container" class="fixed top-6 right-6 z-[200] flex flex-col gap-3"></div>
 
-    <!-- Sidebar -->
     <aside class="w-64 h-full bg-white border-r border-orange-50 flex flex-col p-6 z-50">
         <div class="mb-10 flex items-center gap-3">
             <div class="w-10 h-10 bg-gradient-to-br from-orange-400 to-orange-500 rounded-xl flex items-center justify-center shadow-lg shadow-orange-100 animate-pulse">
@@ -163,16 +171,14 @@
         </nav>
 
         <div class="mt-auto space-y-3">
-            <div id="user-display" class="text-[10px] text-slate-400 font-bold mb-2 break-all px-2">Loading Auth...</div>
-            <button onclick="document.getElementById('fileInput').click()" class="w-full py-3 rounded-xl bg-orange-500 text-white text-xs font-bold hover:bg-orange-600 transition-all shadow-lg shadow-orange-100">อัปโหลดไฟล์</button>
-            <button onclick="exportAllData()" class="w-full py-3 rounded-xl border border-orange-100 text-orange-400 text-xs font-bold hover:bg-orange-50 transition-all">ส่งออก CSV</button>
+            <div id="user-display" class="text-[10px] text-slate-400 font-bold mb-2 break-all px-2">กำลังยืนยันตัวตน...</div>
+            <button onclick="document.getElementById('fileInput').click()" class="w-full py-3 rounded-xl bg-orange-500 text-white text-xs font-bold hover:bg-orange-600 transition-all shadow-lg shadow-orange-100">อัปโหลดไฟล์ (CSV)</button>
+            <button onclick="exportAllData()" class="w-full py-3 rounded-xl border border-orange-100 text-orange-400 text-xs font-bold hover:bg-orange-50 transition-all">ดาวน์โหลด Report</button>
         </div>
     </aside>
 
-    <!-- Main Content -->
     <main id="main-content-area" class="flex-1 flex flex-col p-8 overflow-y-auto">
         
-        <!-- Top Bar -->
         <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-8">
             <div>
                 <h2 id="view-title" class="text-2xl font-extrabold text-slate-800 tracking-tight">สรุปผลการทำงาน</h2>
@@ -184,7 +190,6 @@
                 <button onclick="setTimeFilter('monthly')" id="filter-monthly" class="filter-btn">เดือนนี้</button>
                 <button onclick="setTimeFilter('all')" id="filter-all" class="filter-btn">ทั้งหมด</button>
                 <div class="h-6 w-[1px] bg-orange-100 mx-1"></div>
-                <!-- Date Picker Icon -->
                 <div class="datepicker-wrapper" title="เลือกวันที่">
                     <input type="date" id="custom-date-filter" onchange="setTimeFilter('custom', this.value)">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
@@ -192,13 +197,10 @@
             </div>
         </div>
 
-        <!-- Metric Widgets -->
         <div id="stats-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-8"></div>
 
-        <!-- Dashboard Content -->
         <div id="overview-content" class="grid grid-cols-1 gap-8">
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                <!-- Production Pulse Chart -->
                 <div class="card p-8 soft-shadow bg-white relative overflow-hidden">
                     <div class="absolute top-0 right-0 w-32 h-32 bg-orange-50 rounded-full -mr-16 -mt-16 opacity-40"></div>
                     <div class="flex justify-between items-center mb-6 relative z-10">
@@ -208,7 +210,6 @@
                     <div class="h-[250px] relative z-10"><canvas id="ovOrderChart"></canvas></div>
                 </div>
 
-                <!-- Fix & Redo Mixed Chart -->
                 <div class="card p-8 soft-shadow bg-white relative overflow-hidden">
                     <div class="flex justify-between items-center mb-6">
                         <h3 class="text-[10px] font-black text-rose-400 uppercase tracking-widest">กราฟงานเสียรายชั่วโมง</h3>
@@ -217,17 +218,8 @@
                 </div>
             </div>
 
-            <!-- Fix Types Pie Chart Section -->
             <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                <div class="card p-8 soft-shadow bg-white lg:col-span-1 flex flex-col items-center justify-center">
-                    <h3 class="text-[10px] font-black text-indigo-400 uppercase tracking-widest mb-6 w-full text-left">สัดส่วนประเภทงานแก้</h3>
-                    <div class="w-full h-[220px] flex items-center justify-center">
-                        <canvas id="ovFixTypePieChart"></canvas>
-                    </div>
-                </div>
-
-                <!-- Pending Tasks List -->
-                <div class="card overflow-hidden soft-shadow lg:col-span-2">
+                <div class="card overflow-hidden soft-shadow lg:col-span-3">
                     <div class="px-8 py-5 border-b border-orange-50 flex justify-between items-center bg-orange-50/20">
                         <h3 class="text-[10px] font-black text-slate-400 uppercase tracking-widest">รายการที่ยังไม่เสร็จ (ล่าสุด)</h3>
                         <div class="flex gap-1">
@@ -239,7 +231,6 @@
             </div>
         </div>
 
-        <!-- Management View -->
         <div id="management-content" class="hidden space-y-8">
             <div id="form-container" class="card p-8 soft-shadow bg-white border-orange-100 border-dashed border-2">
                 <form id="main-form" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7 gap-4 items-end" onsubmit="handleFormSubmit(event)"></form>
@@ -247,9 +238,12 @@
 
             <div class="card overflow-hidden soft-shadow">
                 <div class="px-8 py-5 flex flex-col md:flex-row justify-between items-center gap-4 bg-white border-b border-orange-50">
-                    <div class="relative w-full max-sm:w-full max-w-sm">
-                        <input type="text" id="search" onkeyup="filterTableSearch()" placeholder="ค้นหารายการ..." class="input-clean w-full pl-10 border-orange-100">
-                        <svg class="w-5 h-5 absolute left-3 top-2.5 text-orange-200" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+                    <div class="flex items-center gap-4 w-full max-w-lg">
+                        <div class="relative flex-1">
+                            <input type="text" id="search" onkeyup="filterTableSearch()" placeholder="ค้นหารายการ..." class="input-clean w-full pl-10 border-orange-100">
+                            <svg class="w-5 h-5 absolute left-3 top-2.5 text-orange-200" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+                        </div>
+                        <button id="bulk-delete-btn" onclick="deleteSelectedRows()" class="hidden px-4 py-2 bg-rose-500 text-white text-[10px] font-bold rounded-xl shadow-lg shadow-rose-100 transition-all hover:bg-rose-600 animate-in zoom-in">ลบที่เลือก (0)</button>
                     </div>
                     <div id="pagination-info" class="text-[10px] font-bold text-slate-400 uppercase tracking-widest bg-slate-50 px-3 py-1 rounded-lg">กำลังแสดงหน้า 1</div>
                 </div>
@@ -261,7 +255,6 @@
                         <tbody id="table-body" class="text-slate-600"></tbody>
                     </table>
                 </div>
-                <!-- Pagination Controls -->
                 <div id="pagination-controls" class="px-8 py-4 flex justify-center items-center gap-2 border-t border-orange-50 bg-orange-50/10"></div>
             </div>
         </div>
@@ -269,12 +262,11 @@
 
     <input type="file" id="fileInput" class="hidden" multiple onchange="handleFiles(event)">
 
-    <!-- Alert Modal -->
     <div id="alert-modal" class="hidden fixed inset-0 bg-black/50 z-[100] flex items-center justify-center p-4 backdrop-blur-sm">
         <div class="bg-white rounded-2xl p-6 max-w-sm w-full soft-shadow text-center scale-95 animate-in zoom-in duration-200">
-            <h4 id="alert-title" class="text-lg font-bold text-slate-800 mb-2">แจ้งเตือน</h4>
+            <h4 id="alert-title" class="text-lg font-bold text-slate-800 mb-2">แจ้งเตือนจากระบบ</h4>
             <p id="alert-msg" class="text-sm text-slate-500 mb-6"></p>
-            <button onclick="document.getElementById('alert-modal').classList.add('hidden')" class="w-full py-3 bg-orange-500 text-white font-bold rounded-xl shadow-lg shadow-orange-100 hover:scale-[1.02] active:scale-[0.98] transition-transform">ตกลง</button>
+            <button onclick="document.getElementById('alert-modal').classList.add('hidden')" class="w-full py-3 bg-orange-500 text-white font-bold rounded-xl shadow-lg shadow-orange-100 hover:scale-[1.02] active:scale-[0.98] transition-transform">ตกลง เข้าใจแล้ว</button>
         </div>
     </div>
 
@@ -282,16 +274,17 @@
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInWithCustomToken, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, doc, setDoc, getDoc, updateDoc, collection, onSnapshot, query, addDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-
+        
         const firebaseConfig = {
-  apiKey: "AIzaSyA0QWdvnA4ubJ42OAHxnDDJQUHkIFasu3w",
-  authDomain: "data-5c343.firebaseapp.com",
-  projectId: "data-5c343",
-  storageBucket: "data-5c343.firebasestorage.app",
-  messagingSenderId: "555799172632",
-  appId: "1:555799172632:web:ced0d5f789362a9228156d",
-  measurementId: "G-S132TKE0NB"
-};
+          apiKey: "AIzaSyA0QWdvnA4ubJ42OAHxnDDJQUHkIFasu3w",
+          authDomain: "data-5c343.firebaseapp.com",
+          projectId: "data-5c343",
+          storageBucket: "data-5c343.firebasestorage.app",
+          messagingSenderId: "555799172632",
+          appId: "1:555799172632:web:ced0d5f789362a9228156d",
+          measurementId: "G-S132TKE0NB"
+        };
+
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
         const db = getFirestore(app);
@@ -306,8 +299,8 @@
         let charts = {};
         let editingRealIdx = -1;
         let user = null;
+        let selectedRowKeys = new Set();
 
-        // Sticky memory for form fields
         let stickyValues = {
             orders: { dept: 'งานเรียง', color: 'สีแดง' },
             fix: { type: 'ผิดลาย' },
@@ -331,12 +324,12 @@
             },
             fix: { 
                 title: "รายการงานแก้", desc: "ติดตามรายการที่ต้องแก้ไข",
-                cols: ['วันที่และเวลา', 'รูปที่', 'ประเภท', 'รหัส SKU', 'รหัสออเดอร์', 'สถานะ'],
+                cols: ['วันที่และเวลา', 'รูปที่', 'ประเภท', 'รหัสSKU', 'รหัสออเดอร์', 'สถานะ'],
                 fields: [
                     { name: 'datetime', label: 'วันที่และเวลา', type: 'datetime-local' },
                     { name: 'photo_no', label: 'รูปที่', type: 'number' },
-                    { name: 'type', label: 'ประเภทงานแก้', type: 'select', options: ['ผิดลาย', 'ผิดสี', 'ผิดตำแหน่ง', 'ผิดขนาด', 'อื่น'] },
-                    { name: 'sku', label: 'SKU', type: 'text' },
+                    { name: 'type', label: 'ประเภท', type: 'select', options: ['ผิดลาย', 'ผิดสี', 'ผิดตำแหน่ง', 'ผิดขนาด', 'อื่น'] },
+                    { name: 'sku', label: 'รหัสSKU', type: 'text' },
                     { name: 'orderid', label: 'รหัสออเดอร์', type: 'text' }
                 ]
             },
@@ -364,11 +357,14 @@
 
         const themeColors = { orange: '#fb923c', blue: '#38bdf8', indigo: '#818cf8', amber: '#fbbf24', rose: '#fb7185', teal: '#2dd4bf', slate: '#94a3b8' };
 
-        // Firebase Sync Engine
         async function initAuth() {
-            if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-                await signInWithCustomToken(auth, __initial_auth_token);
-            } else {
+            try {
+                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                    await signInWithCustomToken(auth, __initial_auth_token);
+                } else {
+                    await signInAnonymously(auth);
+                }
+            } catch (error) {
                 await signInAnonymously(auth);
             }
         }
@@ -376,7 +372,7 @@
         onAuthStateChanged(auth, (u) => {
             user = u;
             if (u) {
-                document.getElementById('user-display').innerText = `USER: ${u.uid}`;
+                document.getElementById('user-display').innerText = `ID ผู้ใช้งาน: ${u.uid}`;
                 syncData();
             }
         });
@@ -396,11 +392,12 @@
                         renderTable();
                         updateStats();
                     }
-                }, (error) => console.error("Snapshot error:", error));
+                }, (error) => {
+                    console.error("Snapshot error:", error);
+                });
             });
         }
 
-        // Exposed functions
         window.switchView = switchView;
         window.setTimeFilter = setTimeFilter;
         window.handleFormSubmit = handleFormSubmit;
@@ -414,26 +411,31 @@
         window.handleFiles = handleFiles;
         window.exportAllData = exportAllData;
         window.showAlert = showAlert;
+        window.toggleRowSelection = toggleRowSelection;
+        window.toggleAllSelection = toggleAllSelection;
+        window.deleteSelectedRows = deleteSelectedRows;
 
         function showToast(msg, type = 'success') {
             const container = document.getElementById('toast-container');
             const toast = document.createElement('div');
-            const bg = type === 'success' ? 'bg-orange-500' : 'bg-slate-800';
+            const bg = type === 'success' ? 'bg-orange-500' : type === 'info' ? 'bg-sky-500' : 'bg-slate-800';
             toast.className = `toast ${bg} text-white px-6 py-3 rounded-2xl shadow-xl flex items-center gap-3 font-bold text-sm min-w-[200px] border border-white/20 backdrop-blur-md`;
             toast.innerHTML = `<div class="w-2 h-2 rounded-full bg-white animate-ping"></div><span>${msg}</span>`;
             container.appendChild(toast);
             setTimeout(() => { toast.style.opacity = '0'; toast.style.transform = 'translateX(20px)'; setTimeout(() => toast.remove(), 300); }, 3000);
         }
 
-        function speak(text) { if ('speechSynthesis' in window) { const msg = new SpeechSynthesisUtterance(text); msg.lang = 'th-TH'; msg.rate = 1.1; window.speechSynthesis.speak(msg); } }
-        function showAlert(title, msg) { document.getElementById('alert-title').innerText = title; document.getElementById('alert-msg').innerText = msg; document.getElementById('alert-modal').classList.remove('hidden'); speak(msg); }
+        function speak(text) { if ('speechSynthesis' in window) { const msg = new SpeechSynthesisUtterance(text);
+        msg.lang = 'th-TH'; msg.rate = 1.1; window.speechSynthesis.speak(msg); } }
+        function showAlert(title, msg) { document.getElementById('alert-title').innerText = title;
+        document.getElementById('alert-msg').innerText = msg; document.getElementById('alert-modal').classList.remove('hidden'); speak(msg); }
         
         function parseDate(d, t) { 
-            if (!d) return new Date(0); 
+            if (!d) return new Date(0);
             if (d.includes(',')) {
                 let dtStr = d.replace(/"/g, '');
                 const parts = dtStr.split(',');
-                if (parts.length === 2) {
+                if (parts.length >= 2) {
                     const dParts = parts[0].trim().split('/');
                     if (dParts.length === 3) {
                         let year = parseInt(dParts[2]);
@@ -443,8 +445,7 @@
                 }
                 return new Date(dtStr);
             }
-            let dateStr = d;
-            const p = dateStr.split('/');
+            const p = d.split('/');
             const tp = (t || "00:00:00").split(':'); 
             if (p.length < 3) return new Date(0); 
             let year = parseInt(p[2]);
@@ -459,7 +460,8 @@
                 const rd = parseDate(r[0], r[1]);
                 if (currentTimeFilter === 'daily') return rd.toDateString() === now.toDateString();
                 if (currentTimeFilter === 'monthly') return rd.getMonth() === now.getMonth() && rd.getFullYear() === now.getFullYear();
-                if (currentTimeFilter === 'custom' && customDateValue) {
+                if (currentTimeFilter === 'custom' && customDateValue) 
+                {
                     const target = new Date(customDateValue);
                     return rd.toDateString() === target.toDateString();
                 }
@@ -468,16 +470,18 @@
         }
 
         function setTimeFilter(f, val = null) {
-            currentTimeFilter = f; 
+            currentTimeFilter = f;
             customDateValue = val;
-            currentPage = 1; 
+            currentPage = 1; selectedRowKeys.clear(); updateBulkDeleteUI();
             document.querySelectorAll('.filter-btn').forEach(b => b.classList.toggle('active', b.id === `filter-${f}`));
-            if (currentView === 'overview') refreshOverview(); else { renderTable(); updateStats(); }
-            showToast(`ตัวกรอง: ${f === 'custom' ? val : f}`, 'info');
+            if (currentView === 'overview') refreshOverview();
+            else { renderTable(); updateStats(); }
+            showToast(`เปลี่ยนตัวกรองเรียบร้อยแล้วค่ะ`, 'info');
         }
 
         function switchView(v) {
-            currentView = v; currentPage = 1; editingRealIdx = -1;
+            currentView = v;
+            currentPage = 1; editingRealIdx = -1; selectedRowKeys.clear(); updateBulkDeleteUI();
             document.querySelectorAll('nav button').forEach(b => b.classList.toggle('nav-active', b.id === `nav-${v}`));
             document.getElementById('view-title').innerText = CONFIG[v].title;
             document.getElementById('view-desc').innerText = CONFIG[v].desc;
@@ -492,7 +496,7 @@
                 document.getElementById('management-content').classList.remove('hidden');
                 renderForm(v); renderTable(); updateStats();
             }
-            speak(`หน้า${CONFIG[v].title}`);
+            speak(`เปิดหน้า${CONFIG[v].title}`);
         }
 
         function renderForm(v) {
@@ -502,31 +506,40 @@
             const today = now.toISOString().split('T')[0];
             const nowTime = now.toTimeString().split(' ')[0].substring(0, 5);
             const isEditing = editingRealIdx > -1;
-            container.className = isEditing ? "card p-8 soft-shadow bg-sky-50/30 border-sky-200 border-2" : "card p-8 soft-shadow bg-white border-orange-100 border-dashed border-2";
-            
+            container.className = isEditing ?
+                "card p-8 soft-shadow bg-sky-50/30 border-sky-200 border-2" : "card p-8 soft-shadow bg-white border-orange-100 border-dashed border-2";
             form.innerHTML = CONFIG[v].fields.map(f => {
-                let defaultValue = "";
-                if (f.name === 'date') defaultValue = today;
-                else if (f.name === 'time') defaultValue = nowTime;
-                else if (f.name === 'datetime') defaultValue = now.toISOString().slice(0,16);
-                else if (stickyValues[v] && stickyValues[v][f.name]) defaultValue = stickyValues[v][f.name];
+                let defaultValue = stickyValues[v][f.name] || '';
+                if (f.name === 'date' && !defaultValue) defaultValue = today;
+                if (f.name === 'time' && !defaultValue) defaultValue = nowTime;
+                if (f.name === 'datetime' && !defaultValue) defaultValue = now.toISOString().slice(0,16);
+
+                if (f.type === 'select') {
+                    return `
+                    <div class="flex flex-col gap-2">
+                        <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest">${f.label}</label>
+                        <select name="${f.name}" id="field-${f.name}" class="input-clean bg-slate-50/50">
+                            ${f.options.map(o => `<option value="${o}" ${o===defaultValue?'selected':''}>${o}</option>`).join('')}
+                        </select>
+                    </div>`;
+                }
 
                 return `
                 <div class="flex flex-col gap-2">
                     <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest">${f.label}</label>
-                    ${f.type === 'select' ? `<select name="${f.name}" id="field-${f.name}" class="input-clean bg-slate-50/50">${f.options.map(o => `<option value="${o}" ${o === defaultValue ? 'selected' : ''}>${o}</option>`).join('')}</select>` 
-                    : `<input type="${f.type}" name="${f.name}" id="field-${f.name}" value="${defaultValue}" required class="input-clean">`}
+                    <input type="${f.type}" name="${f.name}" id="field-${f.name}" value="${defaultValue}" required class="input-clean">
                 </div>`;
             }).join('') + `
             <div class="flex gap-2">
                 <button type="submit" class="${isEditing ? 'bg-sky-500 hover:bg-sky-600' : 'bg-orange-500 hover:bg-orange-600'} text-white font-bold py-2.5 px-4 rounded-xl text-sm transition-all shadow-lg shadow-orange-100 mt-2 flex-1 hover:scale-[1.02] active:scale-[0.98]">
-                    ${isEditing ? 'อัปเดตรายการ' : 'บันทึก'}
+                    ${isEditing ? 'อัปเดตข้อมูล' : 'บันทึกรายการ'}
                 </button>
                 ${isEditing ? `<button type="button" onclick="cancelEdit()" class="bg-slate-200 text-slate-500 font-bold py-2.5 px-4 rounded-xl text-sm mt-2 hover:bg-slate-300 transition-colors">ยกเลิก</button>` : ''}
             </div>`;
         }
 
-        function cancelEdit() { editingRealIdx = -1; renderForm(currentView); }
+        function cancelEdit() { editingRealIdx = -1; renderForm(currentView);
+        }
 
         async function handleFormSubmit(e) {
             e.preventDefault();
@@ -534,45 +547,39 @@
             const fd = new FormData(e.target);
             const dataObj = Object.fromEntries(fd.entries());
             
-            CONFIG[currentView].fields.forEach(f => {
-                if (f.type === 'select') {
-                    if (!stickyValues[currentView]) stickyValues[currentView] = {};
-                    stickyValues[currentView][f.name] = dataObj[f.name];
-                }
-            });
-
+            Object.keys(dataObj).forEach(k => stickyValues[currentView][k] = dataObj[k]);
             let entry = [];
             if (currentView === 'fix') {
                 const dt = new Date(dataObj.datetime);
-                const dtStr = `${dt.getDate()}/${dt.getMonth()+1}/${dt.getFullYear()}, ${dt.getHours()}:${dt.getMinutes().toString().padStart(2,'0')}:${dt.getSeconds().toString().padStart(2,'0')}`;
+                const dtStr = `"${dt.getDate()}/${dt.getMonth()+1}/${dt.getFullYear()}, ${dt.getHours()}:${dt.getMinutes().toString().padStart(2,'0')}:${dt.getSeconds().toString().padStart(2,'0')}"`;
                 entry = [dtStr, dataObj.photo_no, dataObj.type, dataObj.sku, dataObj.orderid];
             } else {
                 const dateParts = dataObj.date.split('-');
                 const dateStr = `${dateParts[2]}/${dateParts[1]}/${dateParts[0]}`;
                 let timeStr = dataObj.time; if (timeStr.split(':').length === 2) timeStr += ":00";
                 entry = [dateStr, timeStr];
-                CONFIG[currentView].fields.forEach(f => { if (f.name !== 'date' && f.name !== 'time') entry.push(dataObj[f.name]); });
+                CONFIG[currentView].fields.forEach(f => { if(f.name!=='date'&&f.name!=='time') entry.push(dataObj[f.name]); });
             }
             
             try {
                 if (editingRealIdx > -1) {
                     const sorted = [...getFilteredData(rawData[currentView])].sort((a,b) => parseDate(b[0],b[1]) - parseDate(a[0],a[1]));
                     const target = sorted[editingRealIdx];
-                    entry.push(target[target.length - 1]);
-                    
+                    entry.push(target[target.length - 1]); // keep status
                     const q = collection(db, 'artifacts', appId, 'public', 'data', currentView);
                     onSnapshot(q, async (snapshot) => {
                         const targetDoc = snapshot.docs.find(d => JSON.stringify(d.data().data) === JSON.stringify(target));
                         if (targetDoc) await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', currentView, targetDoc.id), { data: entry });
                     }, (e)=>{}, {once: true});
                     editingRealIdx = -1;
+                    showToast("อัปเดตสำเร็จ");
                 } else {
                     entry.push('กำลังทำ');
                     await addDoc(collection(db, 'artifacts', appId, 'public', 'data', currentView), { data: entry, timestamp: new Date() });
+                    showToast("บันทึกสำเร็จ");
                 }
                 renderForm(currentView);
-                showToast("สำเร็จ");
-            } catch (err) { console.error(err); }
+            } catch (err) { showToast("เกิดข้อผิดพลาด", "error"); }
         }
 
         async function toggleStatus(view, globalIdx) {
@@ -591,6 +598,7 @@
 
         async function deleteRow(v, globalIdx) {
             if (!user) return;
+            if(!confirm("ลบรายการนี้?")) return;
             const allSortedData = [...getFilteredData(rawData[v])].sort((a,b) => parseDate(b[0],b[1]) - parseDate(a[0],a[1]));
             const target = allSortedData[globalIdx];
             const q = collection(db, 'artifacts', appId, 'public', 'data', v);
@@ -600,13 +608,68 @@
             }, (e) => {}, { once: true });
         }
 
+        function toggleRowSelection(rowJson) {
+            if (selectedRowKeys.has(rowJson)) selectedRowKeys.delete(rowJson);
+            else selectedRowKeys.add(rowJson);
+            updateBulkDeleteUI();
+            renderTable();
+        }
+
+        function toggleAllSelection(isChecked) {
+            const allInView = [...getFilteredData(rawData[currentView])].sort((a,b) => parseDate(b[0],b[1]) - parseDate(a[0],a[1]));
+            const totalItems = allInView.length;
+            const start = (currentPage - 1) * itemsPerPage;
+            const displayData = allInView.slice(start, start + itemsPerPage);
+            displayData.forEach(row => {
+                const key = JSON.stringify(row);
+                if (isChecked) selectedRowKeys.add(key);
+                else selectedRowKeys.delete(key);
+            });
+            updateBulkDeleteUI();
+            renderTable();
+        }
+
+        function updateBulkDeleteUI() {
+            const btn = document.getElementById('bulk-delete-btn');
+            const count = selectedRowKeys.size;
+            if (count > 0) {
+                btn.innerText = `ลบที่เลือก (${count})`;
+                btn.classList.remove('hidden');
+            } else {
+                btn.classList.add('hidden');
+            }
+        }
+
+        async function deleteSelectedRows() {
+            if (!user || selectedRowKeys.size === 0) return;
+            if (!confirm(`ยืนยันการลบทั้งหมด ${selectedRowKeys.size} รายการ?`)) return;
+            
+            const keysToDelete = Array.from(selectedRowKeys);
+            const q = collection(db, 'artifacts', appId, 'public', 'data', currentView);
+            onSnapshot(q, async (snapshot) => {
+                let deletedCount = 0;
+                for (const rowJson of keysToDelete) {
+                    const targetData = JSON.parse(rowJson);
+                    const targetDoc = snapshot.docs.find(d => JSON.stringify(d.data().data) === JSON.stringify(targetData));
+                    if (targetDoc) {
+                        await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', currentView, targetDoc.id));
+                        deletedCount++;
+                    }
+                }
+                selectedRowKeys.clear();
+                updateBulkDeleteUI();
+                showToast(`ลบสำเร็จ ${deletedCount} รายการ`);
+            }, (e) => {}, { once: true });
+        }
+
         function editRow(v, globalIdx) {
             const allSortedData = [...getFilteredData(rawData[v])].sort((a,b) => parseDate(b[0],b[1]) - parseDate(a[0],a[1]));
             const target = allSortedData[globalIdx];
             editingRealIdx = globalIdx;
             renderForm(v);
             if (v === 'fix') {
-                const dt = parseDate(target[0]);
+                const dtStr = target[0].toString().replace(/"/g, '');
+                const dt = parseDate(dtStr);
                 const localStr = new Date(dt.getTime() - (dt.getTimezoneOffset() * 60000)).toISOString().slice(0, 16);
                 document.getElementById('field-datetime').value = localStr;
                 document.getElementById('field-photo_no').value = target[1];
@@ -618,12 +681,7 @@
                 let yr = parseInt(dateParts[2]); if (yr > 2500) yr -= 543;
                 document.getElementById('field-date').value = `${yr}-${dateParts[1].padStart(2, '0')}-${dateParts[0].padStart(2, '0')}`;
                 document.getElementById('field-time').value = target[1].substring(0, 5);
-                CONFIG[v].fields.forEach((f, fIdx) => {
-                    if (f.name !== 'date' && f.name !== 'time') {
-                        const el = document.getElementById(`field-${f.name}`);
-                        if (el) el.value = target[fIdx + 2] || '';
-                    }
-                });
+                CONFIG[v].fields.forEach((f, fIdx) => { if(f.name!=='date'&&f.name!=='time') document.getElementById(`field-${f.name}`).value = target[fIdx+2] || ''; });
             }
             document.querySelector('main').scrollTo({ top: 0, behavior: 'smooth' });
         }
@@ -639,23 +697,23 @@
             const start = (currentPage - 1) * itemsPerPage;
             const displayData = allSortedData.slice(start, start + itemsPerPage);
             
+            // Sync Check-All Checkbox
+            const allSelectedInPage = displayData.length > 0 && displayData.every(row => selectedRowKeys.has(JSON.stringify(row)));
             info.innerText = `หน้า ${currentPage} จาก ${totalPages}`;
-            head.innerHTML = CONFIG[currentView].cols.map(c => `<th>${c}</th>`).join('') + `<th class="text-right">จัดการ</th>`;
+            head.innerHTML = `<th class="w-12"><input type="checkbox" class="check-all-box" onchange="toggleAllSelection(this.checked)" ${allSelectedInPage?'checked':''}></th>` + CONFIG[currentView].cols.map(c => `<th>${c}</th>`).join('') + `<th class="text-right">จัดการ</th>`;
             body.innerHTML = displayData.map((row, localIdx) => {
                 const globalIdx = start + localIdx;
+                const rowJson = JSON.stringify(row);
+                const isSelected = selectedRowKeys.has(rowJson);
                 const statusVal = row[row.length - 1];
                 let statusClass = "px-3 py-1 rounded-full text-[10px] font-bold transition-all " + (statusVal === 'เสร็จแล้ว' || statusVal === 'TRUE' ? "bg-emerald-50 text-emerald-500" : "bg-orange-50 text-orange-500");
-                
-                let cellsHtml = '';
+                let cellsHtml = `<td><input type="checkbox" class="check-all-box" onchange='toggleRowSelection(${JSON.stringify(rowJson)})' ${isSelected?'checked':''}></td>`;
                 row.forEach((cell, cIdx) => {
-                    if (cIdx === row.length - 1) {
-                        cellsHtml += `<td><button onclick="toggleStatus('${currentView}', ${globalIdx})" class="${statusClass}">${statusVal === 'TRUE' ? 'เสร็จแล้ว' : cell}</button></td>`;
-                    } else {
-                        cellsHtml += `<td>${cell || '-'}</td>`;
-                    }
+                    const cleanCell = (cell || '-').toString().replace(/"/g, '');
+                    if (cIdx === row.length - 1) cellsHtml += `<td><button onclick="toggleStatus('${currentView}', ${globalIdx})" class="${statusClass}">${statusVal === 'TRUE' ? 'เสร็จแล้ว' : cleanCell}</button></td>`;
+                    else cellsHtml += `<td>${cleanCell}</td>`;
                 });
-
-                return `<tr class="group animate-in fade-in duration-300">
+                return `<tr class="group animate-in fade-in duration-300 ${isSelected?'bg-orange-50/30':''}">
                     ${cellsHtml}
                     <td class="text-right">
                         <div class="flex justify-end gap-3">
@@ -664,8 +722,7 @@
                         </div>
                     </td>
                 </tr>`;
-            }).join('') || `<tr><td colspan="20" class="text-center py-24 italic text-slate-300">ไม่มีข้อมูล</td></tr>`;
-            
+            }).join('') || '<tr><td colspan="20" class="text-center py-24 italic text-slate-300">ไม่มีข้อมูล</td></tr>';
             let pBtns = ''; if (totalPages > 1) {
                 pBtns += `<button onclick="changePage(${currentPage-1})" class="${currentPage===1?'opacity-30 pointer-events-none':''} px-3 py-1 rounded-lg border border-orange-100 text-orange-400 text-[10px] font-bold">ก่อนหน้า</button>`;
                 for (let i = 1; i <= totalPages; i++) pBtns += `<button onclick="changePage(${i})" class="w-8 h-8 rounded-lg border text-[10px] font-bold ${i===currentPage?'bg-orange-500 text-white':'text-slate-400'}">${i}</button>`;
@@ -674,13 +731,16 @@
             controls.innerHTML = pBtns;
         }
 
-        function changePage(p) { currentPage = p; renderTable(); }
+        function changePage(p) { currentPage = p; renderTable();
+        }
+        
         function updateStats() {
-            const o = getFilteredData(rawData.orders); const r = getFilteredData(rawData.redo); const f = getFilteredData(rawData.fix);
+            const o = getFilteredData(rawData.orders);
+            const r = getFilteredData(rawData.redo); const f = getFilteredData(rawData.fix);
             const total = o.reduce((s, x) => s + (parseInt(x[3]) || 0), 0);
             const totalRedo = r.reduce((s, x) => s + (parseInt(x[3]) || 0), 0);
             const pending = f.filter(x => x[x.length-1] !== 'เสร็จแล้ว' && x[x.length-1] !== 'TRUE').length;
-            const items = [{ label: "ผลิตรวมทั้งหมด", val: total.toLocaleString(), color: "text-orange-500", bg: "bg-orange-50" },{ label: "งานเสียรวม", val: totalRedo.toLocaleString(), color: "text-rose-500", bg: "bg-rose-50" },{ label: "รายการที่ยังไม่เสร็จ", val: pending, color: "text-sky-500", bg: "bg-sky-50" }];
+            const items = [{ label: "ยอดผลิตรวมทั้งหมด", val: total.toLocaleString(), color: "text-orange-500", bg: "bg-orange-50" },{ label: "จำนวนงานเสียรวม", val: totalRedo.toLocaleString(), color: "text-rose-500", bg: "bg-rose-50" },{ label: "งานแก้ที่ค้างอยู่", val: pending, color: "text-sky-500", bg: "bg-sky-50" }];
             document.getElementById('stats-grid').innerHTML = items.map(s => `<div class="card p-6 soft-shadow flex flex-col justify-between h-32 relative overflow-hidden group hover:scale-[1.03]"><div class="absolute -right-2 -bottom-2 w-12 h-12 ${s.bg} rounded-full opacity-20 group-hover:scale-150 transition-transform duration-500"></div><p class="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] relative z-10">${s.label}</p><h4 class="text-2xl font-black ${s.color} relative z-10">${s.val}</h4></div>`).join('');
         }
 
@@ -689,23 +749,21 @@
             Object.values(charts).forEach(c => c && c.destroy());
             const orders = getFilteredData(rawData.orders); const redo = getFilteredData(rawData.redo); const fix = getFilteredData(rawData.fix);
             const labels = []; for (let h = 8; h <= 23; h++) labels.push(`${h.toString().padStart(2, '0')}:30`);
-            
-            const getBucket = (t) => { if(!t) return null; const p = t.includes(',') ? t.split(',')[1].trim().split(':') : t.split(':'); const h = parseInt(p[0]); const m = parseInt(p[1]); if (isNaN(h) || h < 8) return null; return `${h.toString().padStart(2, '0')}:30`; };
+            const getBucket = (t) => { if(!t) return null; const p = t.toString().includes(',') ? t.toString().split(',')[1].trim().split(':') : t.toString().split(':');
+            const h = parseInt(p[0]); if (isNaN(h) || h < 8) return null; return `${h.toString().padStart(2, '0')}:30`; };
             const depts = ['งานเรียง', 'งานล็อต', 'งานBY', 'งานเฉินผิง', 'งานด่วน'];
-            const hrMap = {}; orders.forEach(r => { const b = getBucket(r[1]); if (!b) return; const d = r[4]; const v = parseInt(r[3]) || 0; if(!hrMap[b]) hrMap[b] = {}; hrMap[b][d] = (hrMap[b][d] || 0) + v; });
+            const hrMap = {};
+            orders.forEach(r => { const b = getBucket(r[1]); if (!b) return; const d = r[4]; const v = parseInt(r[3]) || 0; if(!hrMap[b]) hrMap[b] = {}; if (depts.includes(d)) hrMap[b][d] = (hrMap[b][d] || 0) + v; });
             const deptDatasets = depts.map((d, i) => { const colors = [themeColors.orange, themeColors.blue, themeColors.indigo, themeColors.amber, themeColors.rose]; return { label: d, data: labels.map(l => (hrMap[l] && hrMap[l][d]) || 0), borderColor: colors[i], backgroundColor: colors[i] + '22', borderWidth: 2, fill: true, tension: 0.3 } });
             charts.ovOrder = new Chart(document.getElementById('ovOrderChart'), { type: 'line', data: { labels, datasets: deptDatasets }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { boxWidth: 8, font: { size: 10 } } } } } });
-            
             const redoHrMap = {}; redo.forEach(r => { const b = getBucket(r[1]); if (b) redoHrMap[b] = (redoHrMap[b] || 0) + (parseInt(r[3]) || 0); });
-            const fixHrMap = {}; const fixTypeMap = {}; fix.forEach(r => { const b = getBucket(r[0]); if (b) fixHrMap[b] = (fixHrMap[b] || 0) + 1; const t = r[2]; if(t) fixTypeMap[t] = (fixTypeMap[t] || 0) + 1; });
+            const fixHrMap = {}; fix.forEach(r => { const b = getBucket(r[0]); if (b) fixHrMap[b] = (fixHrMap[b] || 0) + 1; });
             charts.ovFixRedo = new Chart(document.getElementById('ovFixRedoChart'), { type: 'bar', data: { labels, datasets: [{ label: 'งานเสีย', data: labels.map(l => redoHrMap[l] || 0), backgroundColor: themeColors.rose, borderRadius: 4 },{ label: 'งานแก้', data: labels.map(l => fixHrMap[l] || 0), backgroundColor: themeColors.indigo, borderRadius: 4 }] }, options: { responsive: true, maintainAspectRatio: false } });
-
-            charts.ovFixTypePie = new Chart(document.getElementById('ovFixTypePieChart'), { type: 'doughnut', data: { labels: Object.keys(fixTypeMap), datasets: [{ data: Object.values(fixTypeMap), backgroundColor: [themeColors.orange, themeColors.blue, themeColors.indigo, themeColors.rose], borderWidth: 0 }] }, options: { responsive: true, maintainAspectRatio: false, cutout: '70%' } });
             
             const pOrders = orders.filter(o => (o[o.length-1] !== 'เสร็จแล้ว' && o[o.length-1] !== 'TRUE')).map(o => ({ t: 'งานผลิต', id: o[2], d: o[0], h: o[1], c: 'text-orange-400', view: 'orders' }));
             const pFix = fix.filter(f => (f[f.length-1] !== 'เสร็จแล้ว' && f[f.length-1] !== 'TRUE')).map(f => ({ t: 'งานแก้', id: f[4]||f[3], d: f[0], h: '', c: 'text-indigo-400', view: 'fix' }));
             const allPending = [...pOrders, ...pFix].sort((a,b) => parseDate(b.d, b.h) - parseDate(a.d, a.h)).slice(0, 10);
-            document.getElementById('ovRecentList').innerHTML = allPending.map(i => `<div class="px-8 py-4 flex justify-between items-center bg-white hover:bg-orange-50/20"><div><span class="text-[9px] font-black ${i.c} uppercase">${i.t} #${i.id}</span><p class="text-[10px] text-slate-300 font-bold">${i.d}</p></div><button onclick="directToggleStatus('${i.view}', '${i.id}')" class="px-3 py-1 bg-orange-50 text-orange-500 text-[9px] font-black rounded-lg">กำลังทำ</button></div>`).join('') || '<div class="py-16 text-center text-slate-200 uppercase text-[10px]">ไม่มีงานค้าง</div>';
+            document.getElementById('ovRecentList').innerHTML = allPending.map(i => `<div class="px-8 py-4 flex justify-between items-center bg-white hover:bg-orange-50/20"><div><span class="text-[9px] font-black ${i.c} uppercase">${i.t} #${i.id}</span><p class="text-[10px] text-slate-300 font-bold">${i.d.toString().replace(/"/g,'')}</p></div><button onclick="directToggleStatus('${i.view}', '${i.id}')" class="px-3 py-1 bg-orange-50 text-orange-500 text-[9px] font-black rounded-lg">กำลังทำ</button></div>`).join('') || '<div class="py-16 text-center text-slate-200">ไม่มีงานค้าง</div>';
         }
 
         function directToggleStatus(view, id) {
@@ -726,7 +784,7 @@
                     const data = lines.slice(1).map(l => l.split(',').map(c => c.trim().replace(/^"|"$/g, '')));
                     let targetCol = header.includes('แผนก') ? "orders" : header.includes('sku') ? "fix" : header.includes('ครั้งที่') ? "redo" : "";
                     if (targetCol) {
-                        for (const row of data) await addDoc(collection(db, 'artifacts', appId, 'public', 'data', targetCol), { data: row, timestamp: new Date() });
+                        for (const row of data) if(row.length>0) await addDoc(collection(db, 'artifacts', appId, 'public', 'data', targetCol), { data: row, timestamp: new Date() });
                         showToast("อัปโหลดสำเร็จ");
                     }
                 };
@@ -738,10 +796,12 @@
             let csv = "\ufeffType,Date,Time,V1,V2,V3,V4,V5,Status\n";
             Object.keys(rawData).forEach(k => rawData[k].forEach(r => csv += `${k.toUpperCase()},${r.join(',')}\n`));
             const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-            const link = document.createElement("a"); link.href = URL.createObjectURL(blob); link.download = `Report.csv`; link.click();
+            const link = document.createElement("a");
+            link.href = URL.createObjectURL(blob); link.download = `Report_Production.csv`; link.click();
         }
 
-        window.onload = async () => { await initAuth(); switchView('overview'); };
+        window.onload = async () => { await initAuth();
+        switchView('overview'); };
     </script>
 </body>
 </html>
