@@ -7,6 +7,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Sarabun:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <!-- Firebase Libraries -->
     <script src="https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js" type="module"></script>
     <script src="https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js" type="module"></script>
     <script src="https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js" type="module"></script>
@@ -20,7 +21,7 @@
             --text-sub: #94a3b8;
         }
         body { 
-            font-family: 'Inter', 'Sarabun', sans-serif;
+            font-family: 'Inter', 'Sarabun', sans-serif; 
             background-color: var(--bg-main); 
             color: var(--text-main);
             transition: all 0.3s ease;
@@ -29,7 +30,7 @@
             box-shadow: 0 10px 25px -5px rgba(251, 146, 60, 0.05), 0 8px 10px -6px rgba(56, 189, 248, 0.03);
         }
         .card { 
-            background: var(--card-bg);
+            background: var(--card-bg); 
             border: 1px solid #f8fafc;
             border-radius: 1.25rem;
             transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
@@ -66,37 +67,26 @@
             outline: none;
             transition: all 0.2s;
         }
-        .input-clean:focus { border-color: var(--primary);
-        box-shadow: 0 0 0 3px rgba(251, 146, 60, 0.1); }
+        .input-clean:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(251, 146, 60, 0.1); }
         
-        th { font-size: 10px;
-        text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-sub); padding: 14px 24px; border-bottom: 2px solid #fff7ed;
-        }
-        td { padding: 12px 24px; font-size: 14px; border-bottom: 1px solid #fdfcfb;
-        }
-        tr:hover { background: #fffbf7;
-        }
+        th { font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-sub); padding: 14px 24px; border-bottom: 2px solid #fff7ed; }
+        td { padding: 12px 24px; font-size: 14px; border-bottom: 1px solid #fdfcfb; }
+        tr:hover { background: #fffbf7; }
 
-        ::-webkit-scrollbar { width: 6px;
-        }
-        ::-webkit-scrollbar-thumb { background: #fed7aa; border-radius: 10px;
-        }
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-thumb { background: #fed7aa; border-radius: 10px; }
 
         @keyframes slideIn {
-            from { transform: translateX(100%);
-            opacity: 0; }
-            to { transform: translateX(0); opacity: 1;
-            }
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
         }
         .toast {
             animation: slideIn 0.3s ease-out forwards;
         }
 
         @keyframes viewEntrance {
-            0% { transform: translateX(30px);
-            opacity: 0; }
-            100% { transform: translateX(0); opacity: 1;
-            }
+            0% { transform: translateX(30px); opacity: 0; }
+            100% { transform: translateX(0); opacity: 1; }
         }
         .view-animate {
             animation: viewEntrance 0.4s cubic-bezier(0.25, 1, 0.5, 1) forwards;
@@ -113,8 +103,7 @@
             cursor: pointer;
             transition: background 0.2s;
         }
-        .datepicker-wrapper:hover { background: #fff7ed;
-        }
+        .datepicker-wrapper:hover { background: #fff7ed; }
         .datepicker-wrapper input[type="date"] {
             position: absolute;
             opacity: 0;
@@ -128,14 +117,15 @@
             z-index: 1;
             color: #fb923c;
         }
-        .check-all-box { width: 16px; height: 16px; accent-color: #fb923c;
-        cursor: pointer; }
+        .check-all-box { width: 16px; height: 16px; accent-color: #fb923c; cursor: pointer; }
     </style>
 </head>
 <body class="flex h-screen overflow-hidden">
 
+    <!-- Toast Notification Container -->
     <div id="toast-container" class="fixed top-6 right-6 z-[200] flex flex-col gap-3"></div>
 
+    <!-- Sidebar -->
     <aside class="w-64 h-full bg-white border-r border-orange-50 flex flex-col p-6 z-50">
         <div class="mb-10 flex items-center gap-3">
             <div class="w-10 h-10 bg-gradient-to-br from-orange-400 to-orange-500 rounded-xl flex items-center justify-center shadow-lg shadow-orange-100 animate-pulse">
@@ -177,8 +167,10 @@
         </div>
     </aside>
 
+    <!-- Main Content -->
     <main id="main-content-area" class="flex-1 flex flex-col p-8 overflow-y-auto">
         
+        <!-- Top Bar -->
         <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-8">
             <div>
                 <h2 id="view-title" class="text-2xl font-extrabold text-slate-800 tracking-tight">สรุปผลการทำงาน</h2>
@@ -190,6 +182,7 @@
                 <button onclick="setTimeFilter('monthly')" id="filter-monthly" class="filter-btn">เดือนนี้</button>
                 <button onclick="setTimeFilter('all')" id="filter-all" class="filter-btn">ทั้งหมด</button>
                 <div class="h-6 w-[1px] bg-orange-100 mx-1"></div>
+                <!-- Date Picker -->
                 <div class="datepicker-wrapper" title="เลือกวันที่">
                     <input type="date" id="custom-date-filter" onchange="setTimeFilter('custom', this.value)">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
@@ -197,10 +190,13 @@
             </div>
         </div>
 
+        <!-- Metric Widgets -->
         <div id="stats-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-8"></div>
 
+        <!-- Dashboard Content -->
         <div id="overview-content" class="grid grid-cols-1 gap-8">
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                <!-- Production Pulse Chart -->
                 <div class="card p-8 soft-shadow bg-white relative overflow-hidden">
                     <div class="absolute top-0 right-0 w-32 h-32 bg-orange-50 rounded-full -mr-16 -mt-16 opacity-40"></div>
                     <div class="flex justify-between items-center mb-6 relative z-10">
@@ -210,6 +206,7 @@
                     <div class="h-[250px] relative z-10"><canvas id="ovOrderChart"></canvas></div>
                 </div>
 
+                <!-- Fix & Redo Mixed Chart -->
                 <div class="card p-8 soft-shadow bg-white relative overflow-hidden">
                     <div class="flex justify-between items-center mb-6">
                         <h3 class="text-[10px] font-black text-rose-400 uppercase tracking-widest">กราฟงานเสียรายชั่วโมง</h3>
@@ -219,7 +216,14 @@
             </div>
 
             <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                <div class="card overflow-hidden soft-shadow lg:col-span-3">
+                <div class="card p-8 soft-shadow bg-white lg:col-span-1 flex flex-col items-center justify-center">
+                    <h3 class="text-[10px] font-black text-indigo-400 uppercase tracking-widest mb-6 w-full text-left">สัดส่วนประเภทงานแก้</h3>
+                    <div class="w-full h-[220px] flex items-center justify-center">
+                        <canvas id="ovFixTypePieChart"></canvas>
+                    </div>
+                </div>
+
+                <div class="card overflow-hidden soft-shadow lg:col-span-2">
                     <div class="px-8 py-5 border-b border-orange-50 flex justify-between items-center bg-orange-50/20">
                         <h3 class="text-[10px] font-black text-slate-400 uppercase tracking-widest">รายการที่ยังไม่เสร็จ (ล่าสุด)</h3>
                         <div class="flex gap-1">
@@ -231,6 +235,7 @@
             </div>
         </div>
 
+        <!-- Management View -->
         <div id="management-content" class="hidden space-y-8">
             <div id="form-container" class="card p-8 soft-shadow bg-white border-orange-100 border-dashed border-2">
                 <form id="main-form" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7 gap-4 items-end" onsubmit="handleFormSubmit(event)"></form>
@@ -262,6 +267,7 @@
 
     <input type="file" id="fileInput" class="hidden" multiple onchange="handleFiles(event)">
 
+    <!-- Alert Modal -->
     <div id="alert-modal" class="hidden fixed inset-0 bg-black/50 z-[100] flex items-center justify-center p-4 backdrop-blur-sm">
         <div class="bg-white rounded-2xl p-6 max-w-sm w-full soft-shadow text-center scale-95 animate-in zoom-in duration-200">
             <h4 id="alert-title" class="text-lg font-bold text-slate-800 mb-2">แจ้งเตือนจากระบบ</h4>
@@ -274,17 +280,16 @@
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInWithCustomToken, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, doc, setDoc, getDoc, updateDoc, collection, onSnapshot, query, addDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-        
-        const firebaseConfig = {
-          apiKey: "AIzaSyA0QWdvnA4ubJ42OAHxnDDJQUHkIFasu3w",
-          authDomain: "data-5c343.firebaseapp.com",
-          projectId: "data-5c343",
-          storageBucket: "data-5c343.firebasestorage.app",
-          messagingSenderId: "555799172632",
-          appId: "1:555799172632:web:ced0d5f789362a9228156d",
-          measurementId: "G-S132TKE0NB"
-        };
 
+        const firebaseConfig = {
+  apiKey: "AIzaSyA0QWdvnA4ubJ42OAHxnDDJQUHkIFasu3w",
+  authDomain: "data-5c343.firebaseapp.com",
+  projectId: "data-5c343",
+  storageBucket: "data-5c343.firebasestorage.app",
+  messagingSenderId: "555799172632",
+  appId: "1:555799172632:web:ced0d5f789362a9228156d",
+  measurementId: "G-S132TKE0NB"
+};
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
         const db = getFirestore(app);
@@ -299,7 +304,7 @@
         let charts = {};
         let editingRealIdx = -1;
         let user = null;
-        let selectedRowKeys = new Set();
+        let selectedRowKeys = new Set(); // Stores JSON strings of row data for uniqueness
 
         let stickyValues = {
             orders: { dept: 'งานเรียง', color: 'สีแดง' },
@@ -425,13 +430,11 @@
             setTimeout(() => { toast.style.opacity = '0'; toast.style.transform = 'translateX(20px)'; setTimeout(() => toast.remove(), 300); }, 3000);
         }
 
-        function speak(text) { if ('speechSynthesis' in window) { const msg = new SpeechSynthesisUtterance(text);
-        msg.lang = 'th-TH'; msg.rate = 1.1; window.speechSynthesis.speak(msg); } }
-        function showAlert(title, msg) { document.getElementById('alert-title').innerText = title;
-        document.getElementById('alert-msg').innerText = msg; document.getElementById('alert-modal').classList.remove('hidden'); speak(msg); }
+        function speak(text) { if ('speechSynthesis' in window) { const msg = new SpeechSynthesisUtterance(text); msg.lang = 'th-TH'; msg.rate = 1.1; window.speechSynthesis.speak(msg); } }
+        function showAlert(title, msg) { document.getElementById('alert-title').innerText = title; document.getElementById('alert-msg').innerText = msg; document.getElementById('alert-modal').classList.remove('hidden'); speak(msg); }
         
         function parseDate(d, t) { 
-            if (!d) return new Date(0);
+            if (!d) return new Date(0); 
             if (d.includes(',')) {
                 let dtStr = d.replace(/"/g, '');
                 const parts = dtStr.split(',');
@@ -460,8 +463,7 @@
                 const rd = parseDate(r[0], r[1]);
                 if (currentTimeFilter === 'daily') return rd.toDateString() === now.toDateString();
                 if (currentTimeFilter === 'monthly') return rd.getMonth() === now.getMonth() && rd.getFullYear() === now.getFullYear();
-                if (currentTimeFilter === 'custom' && customDateValue) 
-                {
+                if (currentTimeFilter === 'custom' && customDateValue) {
                     const target = new Date(customDateValue);
                     return rd.toDateString() === target.toDateString();
                 }
@@ -470,18 +472,15 @@
         }
 
         function setTimeFilter(f, val = null) {
-            currentTimeFilter = f;
-            customDateValue = val;
+            currentTimeFilter = f; customDateValue = val;
             currentPage = 1; selectedRowKeys.clear(); updateBulkDeleteUI();
             document.querySelectorAll('.filter-btn').forEach(b => b.classList.toggle('active', b.id === `filter-${f}`));
-            if (currentView === 'overview') refreshOverview();
-            else { renderTable(); updateStats(); }
+            if (currentView === 'overview') refreshOverview(); else { renderTable(); updateStats(); }
             showToast(`เปลี่ยนตัวกรองเรียบร้อยแล้วค่ะ`, 'info');
         }
 
         function switchView(v) {
-            currentView = v;
-            currentPage = 1; editingRealIdx = -1; selectedRowKeys.clear(); updateBulkDeleteUI();
+            currentView = v; currentPage = 1; editingRealIdx = -1; selectedRowKeys.clear(); updateBulkDeleteUI();
             document.querySelectorAll('nav button').forEach(b => b.classList.toggle('nav-active', b.id === `nav-${v}`));
             document.getElementById('view-title').innerText = CONFIG[v].title;
             document.getElementById('view-desc').innerText = CONFIG[v].desc;
@@ -506,8 +505,8 @@
             const today = now.toISOString().split('T')[0];
             const nowTime = now.toTimeString().split(' ')[0].substring(0, 5);
             const isEditing = editingRealIdx > -1;
-            container.className = isEditing ?
-                "card p-8 soft-shadow bg-sky-50/30 border-sky-200 border-2" : "card p-8 soft-shadow bg-white border-orange-100 border-dashed border-2";
+            container.className = isEditing ? "card p-8 soft-shadow bg-sky-50/30 border-sky-200 border-2" : "card p-8 soft-shadow bg-white border-orange-100 border-dashed border-2";
+            
             form.innerHTML = CONFIG[v].fields.map(f => {
                 let defaultValue = stickyValues[v][f.name] || '';
                 if (f.name === 'date' && !defaultValue) defaultValue = today;
@@ -538,8 +537,7 @@
             </div>`;
         }
 
-        function cancelEdit() { editingRealIdx = -1; renderForm(currentView);
-        }
+        function cancelEdit() { editingRealIdx = -1; renderForm(currentView); }
 
         async function handleFormSubmit(e) {
             e.preventDefault();
@@ -548,6 +546,7 @@
             const dataObj = Object.fromEntries(fd.entries());
             
             Object.keys(dataObj).forEach(k => stickyValues[currentView][k] = dataObj[k]);
+
             let entry = [];
             if (currentView === 'fix') {
                 const dt = new Date(dataObj.datetime);
@@ -620,6 +619,7 @@
             const totalItems = allInView.length;
             const start = (currentPage - 1) * itemsPerPage;
             const displayData = allInView.slice(start, start + itemsPerPage);
+            
             displayData.forEach(row => {
                 const key = JSON.stringify(row);
                 if (isChecked) selectedRowKeys.add(key);
@@ -646,6 +646,7 @@
             
             const keysToDelete = Array.from(selectedRowKeys);
             const q = collection(db, 'artifacts', appId, 'public', 'data', currentView);
+            
             onSnapshot(q, async (snapshot) => {
                 let deletedCount = 0;
                 for (const rowJson of keysToDelete) {
@@ -699,6 +700,7 @@
             
             // Sync Check-All Checkbox
             const allSelectedInPage = displayData.length > 0 && displayData.every(row => selectedRowKeys.has(JSON.stringify(row)));
+
             info.innerText = `หน้า ${currentPage} จาก ${totalPages}`;
             head.innerHTML = `<th class="w-12"><input type="checkbox" class="check-all-box" onchange="toggleAllSelection(this.checked)" ${allSelectedInPage?'checked':''}></th>` + CONFIG[currentView].cols.map(c => `<th>${c}</th>`).join('') + `<th class="text-right">จัดการ</th>`;
             body.innerHTML = displayData.map((row, localIdx) => {
@@ -723,6 +725,7 @@
                     </td>
                 </tr>`;
             }).join('') || '<tr><td colspan="20" class="text-center py-24 italic text-slate-300">ไม่มีข้อมูล</td></tr>';
+            
             let pBtns = ''; if (totalPages > 1) {
                 pBtns += `<button onclick="changePage(${currentPage-1})" class="${currentPage===1?'opacity-30 pointer-events-none':''} px-3 py-1 rounded-lg border border-orange-100 text-orange-400 text-[10px] font-bold">ก่อนหน้า</button>`;
                 for (let i = 1; i <= totalPages; i++) pBtns += `<button onclick="changePage(${i})" class="w-8 h-8 rounded-lg border text-[10px] font-bold ${i===currentPage?'bg-orange-500 text-white':'text-slate-400'}">${i}</button>`;
@@ -731,12 +734,10 @@
             controls.innerHTML = pBtns;
         }
 
-        function changePage(p) { currentPage = p; renderTable();
-        }
+        function changePage(p) { currentPage = p; renderTable(); }
         
         function updateStats() {
-            const o = getFilteredData(rawData.orders);
-            const r = getFilteredData(rawData.redo); const f = getFilteredData(rawData.fix);
+            const o = getFilteredData(rawData.orders); const r = getFilteredData(rawData.redo); const f = getFilteredData(rawData.fix);
             const total = o.reduce((s, x) => s + (parseInt(x[3]) || 0), 0);
             const totalRedo = r.reduce((s, x) => s + (parseInt(x[3]) || 0), 0);
             const pending = f.filter(x => x[x.length-1] !== 'เสร็จแล้ว' && x[x.length-1] !== 'TRUE').length;
@@ -749,17 +750,15 @@
             Object.values(charts).forEach(c => c && c.destroy());
             const orders = getFilteredData(rawData.orders); const redo = getFilteredData(rawData.redo); const fix = getFilteredData(rawData.fix);
             const labels = []; for (let h = 8; h <= 23; h++) labels.push(`${h.toString().padStart(2, '0')}:30`);
-            const getBucket = (t) => { if(!t) return null; const p = t.toString().includes(',') ? t.toString().split(',')[1].trim().split(':') : t.toString().split(':');
-            const h = parseInt(p[0]); if (isNaN(h) || h < 8) return null; return `${h.toString().padStart(2, '0')}:30`; };
+            const getBucket = (t) => { if(!t) return null; const p = t.toString().includes(',') ? t.toString().split(',')[1].trim().split(':') : t.toString().split(':'); const h = parseInt(p[0]); if (isNaN(h) || h < 8) return null; return `${h.toString().padStart(2, '0')}:30`; };
             const depts = ['งานเรียง', 'งานล็อต', 'งานBY', 'งานเฉินผิง', 'งานด่วน'];
-            const hrMap = {};
-            orders.forEach(r => { const b = getBucket(r[1]); if (!b) return; const d = r[4]; const v = parseInt(r[3]) || 0; if(!hrMap[b]) hrMap[b] = {}; if (depts.includes(d)) hrMap[b][d] = (hrMap[b][d] || 0) + v; });
+            const hrMap = {}; orders.forEach(r => { const b = getBucket(r[1]); if (!b) return; const d = r[4]; const v = parseInt(r[3]) || 0; if(!hrMap[b]) hrMap[b] = {}; if (depts.includes(d)) hrMap[b][d] = (hrMap[b][d] || 0) + v; });
             const deptDatasets = depts.map((d, i) => { const colors = [themeColors.orange, themeColors.blue, themeColors.indigo, themeColors.amber, themeColors.rose]; return { label: d, data: labels.map(l => (hrMap[l] && hrMap[l][d]) || 0), borderColor: colors[i], backgroundColor: colors[i] + '22', borderWidth: 2, fill: true, tension: 0.3 } });
             charts.ovOrder = new Chart(document.getElementById('ovOrderChart'), { type: 'line', data: { labels, datasets: deptDatasets }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { boxWidth: 8, font: { size: 10 } } } } } });
             const redoHrMap = {}; redo.forEach(r => { const b = getBucket(r[1]); if (b) redoHrMap[b] = (redoHrMap[b] || 0) + (parseInt(r[3]) || 0); });
-            const fixHrMap = {}; fix.forEach(r => { const b = getBucket(r[0]); if (b) fixHrMap[b] = (fixHrMap[b] || 0) + 1; });
+            const fixHrMap = {}; const fixTypeMap = {}; fix.forEach(r => { const b = getBucket(r[0]); if (b) fixHrMap[b] = (fixHrMap[b] || 0) + 1; const t = r[2]; if(t) fixTypeMap[t] = (fixTypeMap[t] || 0) + 1; });
             charts.ovFixRedo = new Chart(document.getElementById('ovFixRedoChart'), { type: 'bar', data: { labels, datasets: [{ label: 'งานเสีย', data: labels.map(l => redoHrMap[l] || 0), backgroundColor: themeColors.rose, borderRadius: 4 },{ label: 'งานแก้', data: labels.map(l => fixHrMap[l] || 0), backgroundColor: themeColors.indigo, borderRadius: 4 }] }, options: { responsive: true, maintainAspectRatio: false } });
-            
+            charts.ovFixTypePie = new Chart(document.getElementById('ovFixTypePieChart'), { type: 'doughnut', data: { labels: Object.keys(fixTypeMap), datasets: [{ data: Object.values(fixTypeMap), backgroundColor: [themeColors.orange, themeColors.blue, themeColors.indigo, themeColors.rose, themeColors.amber, themeColors.teal], borderWidth: 0 }] }, options: { responsive: true, maintainAspectRatio: false, cutout: '70%' } });
             const pOrders = orders.filter(o => (o[o.length-1] !== 'เสร็จแล้ว' && o[o.length-1] !== 'TRUE')).map(o => ({ t: 'งานผลิต', id: o[2], d: o[0], h: o[1], c: 'text-orange-400', view: 'orders' }));
             const pFix = fix.filter(f => (f[f.length-1] !== 'เสร็จแล้ว' && f[f.length-1] !== 'TRUE')).map(f => ({ t: 'งานแก้', id: f[4]||f[3], d: f[0], h: '', c: 'text-indigo-400', view: 'fix' }));
             const allPending = [...pOrders, ...pFix].sort((a,b) => parseDate(b.d, b.h) - parseDate(a.d, a.h)).slice(0, 10);
@@ -796,12 +795,10 @@
             let csv = "\ufeffType,Date,Time,V1,V2,V3,V4,V5,Status\n";
             Object.keys(rawData).forEach(k => rawData[k].forEach(r => csv += `${k.toUpperCase()},${r.join(',')}\n`));
             const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-            const link = document.createElement("a");
-            link.href = URL.createObjectURL(blob); link.download = `Report_Production.csv`; link.click();
+            const link = document.createElement("a"); link.href = URL.createObjectURL(blob); link.download = `Report_Production.csv`; link.click();
         }
 
-        window.onload = async () => { await initAuth();
-        switchView('overview'); };
+        window.onload = async () => { await initAuth(); switchView('overview'); };
     </script>
 </body>
 </html>
