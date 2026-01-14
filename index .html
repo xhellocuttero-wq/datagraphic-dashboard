@@ -1,0 +1,807 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DATA GRAPHIC | WARROOM Edition (Cloud)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Sarabun:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <script src="https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js" type="module"></script>
+    <script src="https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js" type="module"></script>
+    <script src="https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js" type="module"></script>
+    <style>
+        :root {
+            --primary: #fb923c; /* Soft Orange */
+            --secondary: #38bdf8; /* Soft Blue */
+            --bg-main: #fdfcfb; /* Very Light Warm Grey */
+            --card-bg: #ffffff;
+            --text-main: #334155;
+            --text-sub: #94a3b8;
+        }
+        body { 
+            font-family: 'Inter', 'Sarabun', sans-serif;
+            background-color: var(--bg-main); 
+            color: var(--text-main);
+            transition: all 0.3s ease;
+        }
+        .soft-shadow {
+            box-shadow: 0 10px 25px -5px rgba(251, 146, 60, 0.05), 0 8px 10px -6px rgba(56, 189, 248, 0.03);
+        }
+        .card { 
+            background: var(--card-bg);
+            border: 1px solid #f8fafc;
+            border-radius: 1.25rem;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.05);
+        }
+        .nav-active {
+            color: var(--primary);
+            background: #fff7ed;
+            font-weight: 600;
+            box-shadow: inset 4px 0 0 var(--primary);
+        }
+        .filter-btn {
+            font-size: 11px;
+            font-weight: 600;
+            padding: 6px 14px;
+            border-radius: 10px;
+            color: var(--text-sub);
+            transition: all 0.2s;
+        }
+        .filter-btn.active {
+            color: white;
+            background: var(--primary);
+            box-shadow: 0 4px 12px rgba(251, 146, 60, 0.3);
+        }
+        .input-clean {
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            border-radius: 10px;
+            padding: 8px 12px;
+            font-size: 14px;
+            outline: none;
+            transition: all 0.2s;
+        }
+        .input-clean:focus { border-color: var(--primary);
+        box-shadow: 0 0 0 3px rgba(251, 146, 60, 0.1); }
+        
+        th { font-size: 10px;
+        text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-sub); padding: 14px 24px; border-bottom: 2px solid #fff7ed;
+        }
+        td { padding: 12px 24px; font-size: 14px; border-bottom: 1px solid #fdfcfb;
+        }
+        tr:hover { background: #fffbf7;
+        }
+
+        ::-webkit-scrollbar { width: 6px;
+        }
+        ::-webkit-scrollbar-thumb { background: #fed7aa; border-radius: 10px;
+        }
+
+        @keyframes slideIn {
+            from { transform: translateX(100%);
+            opacity: 0; }
+            to { transform: translateX(0); opacity: 1;
+            }
+        }
+        .toast {
+            animation: slideIn 0.3s ease-out forwards;
+        }
+
+        @keyframes viewEntrance {
+            0% { transform: translateX(30px);
+            opacity: 0; }
+            100% { transform: translateX(0); opacity: 1;
+            }
+        }
+        .view-animate {
+            animation: viewEntrance 0.4s cubic-bezier(0.25, 1, 0.5, 1) forwards;
+        }
+
+        .datepicker-wrapper {
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .datepicker-wrapper:hover { background: #fff7ed;
+        }
+        .datepicker-wrapper input[type="date"] {
+            position: absolute;
+            opacity: 0;
+            width: 100%;
+            height: 100%;
+            cursor: pointer;
+            z-index: 2;
+        }
+        .datepicker-wrapper svg {
+            position: relative;
+            z-index: 1;
+            color: #fb923c;
+        }
+        .check-all-box { width: 16px; height: 16px; accent-color: #fb923c;
+        cursor: pointer; }
+    </style>
+</head>
+<body class="flex h-screen overflow-hidden">
+
+    <div id="toast-container" class="fixed top-6 right-6 z-[200] flex flex-col gap-3"></div>
+
+    <aside class="w-64 h-full bg-white border-r border-orange-50 flex flex-col p-6 z-50">
+        <div class="mb-10 flex items-center gap-3">
+            <div class="w-10 h-10 bg-gradient-to-br from-orange-400 to-orange-500 rounded-xl flex items-center justify-center shadow-lg shadow-orange-100 animate-pulse">
+                <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+            </div>
+            <div>
+                <h1 class="text-lg font-bold tracking-tight text-slate-800 uppercase">DATA GRAPHIC</h1>
+                <p class="text-[10px] text-orange-300 font-bold uppercase tracking-widest">WARROOM</p>
+            </div>
+        </div>
+
+        <nav class="space-y-1.5 flex-1">
+            <button onclick="switchView('overview')" id="nav-overview" class="w-full flex items-center gap-4 px-4 py-3 rounded-xl transition-all nav-active">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"></path></svg>
+                <span class="text-sm">ภาพรวมระบบ</span>
+            </button>
+            <button onclick="switchView('orders')" id="nav-orders" class="w-full flex items-center gap-4 px-4 py-3 rounded-xl transition-all text-slate-400 hover:bg-orange-50/50 hover:text-orange-500">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                <span class="text-sm">บันทึกงานผลิต</span>
+            </button>
+            <button onclick="switchView('fix')" id="nav-fix" class="w-full flex items-center gap-4 px-4 py-3 rounded-xl transition-all text-slate-400 hover:bg-orange-50/50 hover:text-orange-500">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
+                <span class="text-sm">บันทึกงานแก้</span>
+            </button>
+            <button onclick="switchView('redo')" id="nav-redo" class="w-full flex items-center gap-4 px-4 py-3 rounded-xl transition-all text-slate-400 hover:bg-orange-50/50 hover:text-orange-500">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+                <span class="text-sm">บันทึกงานเสีย</span>
+            </button>
+            <button onclick="switchView('problems')" id="nav-problems" class="w-full flex items-center gap-4 px-4 py-3 rounded-xl transition-all text-slate-400 hover:bg-orange-50/50 hover:text-orange-500">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+                <span class="text-sm">บันทึกปัญหา</span>
+            </button>
+        </nav>
+
+        <div class="mt-auto space-y-3">
+            <div id="user-display" class="text-[10px] text-slate-400 font-bold mb-2 break-all px-2">กำลังยืนยันตัวตน...</div>
+            <button onclick="document.getElementById('fileInput').click()" class="w-full py-3 rounded-xl bg-orange-500 text-white text-xs font-bold hover:bg-orange-600 transition-all shadow-lg shadow-orange-100">อัปโหลดไฟล์ (CSV)</button>
+            <button onclick="exportAllData()" class="w-full py-3 rounded-xl border border-orange-100 text-orange-400 text-xs font-bold hover:bg-orange-50 transition-all">ดาวน์โหลด Report</button>
+        </div>
+    </aside>
+
+    <main id="main-content-area" class="flex-1 flex flex-col p-8 overflow-y-auto">
+        
+        <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-8">
+            <div>
+                <h2 id="view-title" class="text-2xl font-extrabold text-slate-800 tracking-tight">สรุปผลการทำงาน</h2>
+                <p id="view-desc" class="text-sm text-slate-400 font-medium">ภาพรวมข้อมูลการผลิตและประสิทธิภาพรายแผนก</p>
+            </div>
+            
+            <div class="flex flex-wrap items-center p-1.5 bg-white rounded-2xl soft-shadow border border-orange-50 gap-1">
+                <button onclick="setTimeFilter('daily')" id="filter-daily" class="filter-btn active">วันนี้</button>
+                <button onclick="setTimeFilter('monthly')" id="filter-monthly" class="filter-btn">เดือนนี้</button>
+                <button onclick="setTimeFilter('all')" id="filter-all" class="filter-btn">ทั้งหมด</button>
+                <div class="h-6 w-[1px] bg-orange-100 mx-1"></div>
+                <div class="datepicker-wrapper" title="เลือกวันที่">
+                    <input type="date" id="custom-date-filter" onchange="setTimeFilter('custom', this.value)">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                </div>
+            </div>
+        </div>
+
+        <div id="stats-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-8"></div>
+
+        <div id="overview-content" class="grid grid-cols-1 gap-8">
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                <div class="card p-8 soft-shadow bg-white relative overflow-hidden">
+                    <div class="absolute top-0 right-0 w-32 h-32 bg-orange-50 rounded-full -mr-16 -mt-16 opacity-40"></div>
+                    <div class="flex justify-between items-center mb-6 relative z-10">
+                        <h3 class="text-[10px] font-black text-orange-400 uppercase tracking-widest">กราฟงานผลิตรายชั่วโมง (08:30 - 23:59)</h3>
+                        <span class="text-[10px] bg-sky-50 text-sky-500 px-3 py-1 rounded-full font-bold">จำนวนชิ้น</span>
+                    </div>
+                    <div class="h-[250px] relative z-10"><canvas id="ovOrderChart"></canvas></div>
+                </div>
+
+                <div class="card p-8 soft-shadow bg-white relative overflow-hidden">
+                    <div class="flex justify-between items-center mb-6">
+                        <h3 class="text-[10px] font-black text-rose-400 uppercase tracking-widest">กราฟงานเสียรายชั่วโมง</h3>
+                    </div>
+                    <div class="h-[250px]"><canvas id="ovFixRedoChart"></canvas></div>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                <div class="card overflow-hidden soft-shadow lg:col-span-3">
+                    <div class="px-8 py-5 border-b border-orange-50 flex justify-between items-center bg-orange-50/20">
+                        <h3 class="text-[10px] font-black text-slate-400 uppercase tracking-widest">รายการที่ยังไม่เสร็จ (ล่าสุด)</h3>
+                        <div class="flex gap-1">
+                            <div class="w-1.5 h-1.5 rounded-full bg-orange-300 animate-pulse"></div>
+                        </div>
+                    </div>
+                    <div id="ovRecentList" class="divide-y divide-orange-50/50 max-h-[220px] overflow-y-auto"></div>
+                </div>
+            </div>
+        </div>
+
+        <div id="management-content" class="hidden space-y-8">
+            <div id="form-container" class="card p-8 soft-shadow bg-white border-orange-100 border-dashed border-2">
+                <form id="main-form" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7 gap-4 items-end" onsubmit="handleFormSubmit(event)"></form>
+            </div>
+
+            <div class="card overflow-hidden soft-shadow">
+                <div class="px-8 py-5 flex flex-col md:flex-row justify-between items-center gap-4 bg-white border-b border-orange-50">
+                    <div class="flex items-center gap-4 w-full max-w-lg">
+                        <div class="relative flex-1">
+                            <input type="text" id="search" onkeyup="filterTableSearch()" placeholder="ค้นหารายการ..." class="input-clean w-full pl-10 border-orange-100">
+                            <svg class="w-5 h-5 absolute left-3 top-2.5 text-orange-200" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+                        </div>
+                        <button id="bulk-delete-btn" onclick="deleteSelectedRows()" class="hidden px-4 py-2 bg-rose-500 text-white text-[10px] font-bold rounded-xl shadow-lg shadow-rose-100 transition-all hover:bg-rose-600 animate-in zoom-in">ลบที่เลือก (0)</button>
+                    </div>
+                    <div id="pagination-info" class="text-[10px] font-bold text-slate-400 uppercase tracking-widest bg-slate-50 px-3 py-1 rounded-lg">กำลังแสดงหน้า 1</div>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left">
+                        <thead>
+                            <tr id="table-head"></tr>
+                        </thead>
+                        <tbody id="table-body" class="text-slate-600"></tbody>
+                    </table>
+                </div>
+                <div id="pagination-controls" class="px-8 py-4 flex justify-center items-center gap-2 border-t border-orange-50 bg-orange-50/10"></div>
+            </div>
+        </div>
+    </main>
+
+    <input type="file" id="fileInput" class="hidden" multiple onchange="handleFiles(event)">
+
+    <div id="alert-modal" class="hidden fixed inset-0 bg-black/50 z-[100] flex items-center justify-center p-4 backdrop-blur-sm">
+        <div class="bg-white rounded-2xl p-6 max-w-sm w-full soft-shadow text-center scale-95 animate-in zoom-in duration-200">
+            <h4 id="alert-title" class="text-lg font-bold text-slate-800 mb-2">แจ้งเตือนจากระบบ</h4>
+            <p id="alert-msg" class="text-sm text-slate-500 mb-6"></p>
+            <button onclick="document.getElementById('alert-modal').classList.add('hidden')" class="w-full py-3 bg-orange-500 text-white font-bold rounded-xl shadow-lg shadow-orange-100 hover:scale-[1.02] active:scale-[0.98] transition-transform">ตกลง เข้าใจแล้ว</button>
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInWithCustomToken, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, setDoc, getDoc, updateDoc, collection, onSnapshot, query, addDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        
+        const firebaseConfig = {
+          apiKey: "AIzaSyA0QWdvnA4ubJ42OAHxnDDJQUHkIFasu3w",
+          authDomain: "data-5c343.firebaseapp.com",
+          projectId: "data-5c343",
+          storageBucket: "data-5c343.firebasestorage.app",
+          messagingSenderId: "555799172632",
+          appId: "1:555799172632:web:ced0d5f789362a9228156d",
+          measurementId: "G-S132TKE0NB"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+
+        let rawData = { orders: [], fix: [], redo: [], problems: [] };
+        let currentView = 'overview';
+        let currentTimeFilter = 'daily'; 
+        let customDateValue = null;
+        let currentPage = 1;
+        const itemsPerPage = 60;
+        let charts = {};
+        let editingRealIdx = -1;
+        let user = null;
+        let selectedRowKeys = new Set();
+
+        let stickyValues = {
+            orders: { dept: 'งานเรียง', color: 'สีแดง' },
+            fix: { type: 'ผิดลาย' },
+            redo: {},
+            problems: { issue: 'ปัญหากันคน' }
+        };
+
+        const CONFIG = {
+            overview: { title: "สรุปผลการทำงาน", desc: "ภาพรวมข้อมูลการผลิตและประสิทธิภาพรายแผนก" },
+            orders: { 
+                title: "บันทึกงานผลิต", desc: "จัดการรายการผลิตประจำวัน",
+                cols: ['วันที่', 'เวลา', 'เลขที่งาน', 'จำนวน', 'แผนก', 'สีงาน', 'สถานะ'],
+                fields: [
+                    { name: 'date', label: 'วันที่', type: 'date' },
+                    { name: 'time', label: 'เวลา', type: 'time' },
+                    { name: 'id', label: 'เลขที่งาน', type: 'number' },
+                    { name: 'count', label: 'จำนวน', type: 'number' },
+                    { name: 'dept', label: 'แผนก', type: 'select', options: ['งานเรียง', 'งานล็อต', 'งานBY', 'งานเฉินผิง', 'งานด่วน'] },
+                    { name: 'color', label: 'สีงาน', type: 'select', options: ['สีแดง', 'สีเหลือง', 'สีชมพู', 'สีเขียว', 'สีส้ม', 'สีฟ้า', 'สีม่วง', 'สีขาว'] }
+                ]
+            },
+            fix: { 
+                title: "รายการงานแก้", desc: "ติดตามรายการที่ต้องแก้ไข",
+                cols: ['วันที่และเวลา', 'รูปที่', 'ประเภท', 'รหัสSKU', 'รหัสออเดอร์', 'สถานะ'],
+                fields: [
+                    { name: 'datetime', label: 'วันที่และเวลา', type: 'datetime-local' },
+                    { name: 'photo_no', label: 'รูปที่', type: 'number' },
+                    { name: 'type', label: 'ประเภท', type: 'select', options: ['ผิดลาย', 'ผิดสี', 'ผิดตำแหน่ง', 'ผิดขนาด', 'อื่น'] },
+                    { name: 'sku', label: 'รหัสSKU', type: 'text' },
+                    { name: 'orderid', label: 'รหัสออเดอร์', type: 'text' }
+                ]
+            },
+            redo: { 
+                title: "บันทึกงานเสีย", desc: "จัดเก็บข้อมูลงานที่ต้องทำใหม่",
+                cols: ['วันที่', 'เวลา', 'ครั้งที่', 'จำนวน', 'สถานะ'],
+                fields: [
+                    { name: 'date', label: 'วันที่', type: 'date' },
+                    { name: 'time', label: 'เวลา', type: 'time' },
+                    { name: 'attempt', label: 'ทำใหม่ครั้งที่', type: 'number' },
+                    { name: 'count', label: 'จำนวนเสีย', type: 'number' }
+                ]
+            },
+            problems: {
+                title: "บันทึกปัญหา", desc: "เก็บบันทึกอุปสรรคและปัญหาในการทำงาน",
+                cols: ['วันที่', 'เวลา', 'หัวข้อปัญหา', 'รายละเอียด', 'สถานะ'],
+                fields: [
+                    { name: 'date', label: 'วันที่', type: 'date' },
+                    { name: 'time', label: 'เวลา', type: 'time' },
+                    { name: 'issue', label: 'หัวข้อปัญหา', type: 'select', options: ['ปัญหาบุคคล', 'ปัญหางาน'] },
+                    { name: 'detail', label: 'รายละเอียด', type: 'text' }
+                ]
+            }
+        };
+
+        const themeColors = { orange: '#fb923c', blue: '#38bdf8', indigo: '#818cf8', amber: '#fbbf24', rose: '#fb7185', teal: '#2dd4bf', slate: '#94a3b8' };
+
+        async function initAuth() {
+            try {
+                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                    await signInWithCustomToken(auth, __initial_auth_token);
+                } else {
+                    await signInAnonymously(auth);
+                }
+            } catch (error) {
+                await signInAnonymously(auth);
+            }
+        }
+
+        onAuthStateChanged(auth, (u) => {
+            user = u;
+            if (u) {
+                document.getElementById('user-display').innerText = `ID ผู้ใช้งาน: ${u.uid}`;
+                syncData();
+            }
+        });
+
+        function syncData() {
+            if (!user) return;
+            const collections = ['orders', 'fix', 'redo', 'problems'];
+            collections.forEach(col => {
+                const q = collection(db, 'artifacts', appId, 'public', 'data', col);
+                onSnapshot(q, (snapshot) => {
+                    rawData[col] = snapshot.docs.map(doc => ({ firebaseId: doc.id, data: doc.data().data }))
+                        .sort((a,b) => parseDate(b.data[0], b.data[1]) - parseDate(a.data[0], a.data[1]))
+                        .map(item => item.data);
+                    
+                    if (currentView === 'overview') refreshOverview(); 
+                    else if (currentView === col || currentView !== 'overview') {
+                        renderTable();
+                        updateStats();
+                    }
+                }, (error) => {
+                    console.error("Snapshot error:", error);
+                });
+            });
+        }
+
+        window.switchView = switchView;
+        window.setTimeFilter = setTimeFilter;
+        window.handleFormSubmit = handleFormSubmit;
+        window.toggleStatus = toggleStatus;
+        window.directToggleStatus = directToggleStatus;
+        window.deleteRow = deleteRow;
+        window.editRow = editRow;
+        window.cancelEdit = cancelEdit;
+        window.changePage = changePage;
+        window.filterTableSearch = filterTableSearch;
+        window.handleFiles = handleFiles;
+        window.exportAllData = exportAllData;
+        window.showAlert = showAlert;
+        window.toggleRowSelection = toggleRowSelection;
+        window.toggleAllSelection = toggleAllSelection;
+        window.deleteSelectedRows = deleteSelectedRows;
+
+        function showToast(msg, type = 'success') {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            const bg = type === 'success' ? 'bg-orange-500' : type === 'info' ? 'bg-sky-500' : 'bg-slate-800';
+            toast.className = `toast ${bg} text-white px-6 py-3 rounded-2xl shadow-xl flex items-center gap-3 font-bold text-sm min-w-[200px] border border-white/20 backdrop-blur-md`;
+            toast.innerHTML = `<div class="w-2 h-2 rounded-full bg-white animate-ping"></div><span>${msg}</span>`;
+            container.appendChild(toast);
+            setTimeout(() => { toast.style.opacity = '0'; toast.style.transform = 'translateX(20px)'; setTimeout(() => toast.remove(), 300); }, 3000);
+        }
+
+        function speak(text) { if ('speechSynthesis' in window) { const msg = new SpeechSynthesisUtterance(text);
+        msg.lang = 'th-TH'; msg.rate = 1.1; window.speechSynthesis.speak(msg); } }
+        function showAlert(title, msg) { document.getElementById('alert-title').innerText = title;
+        document.getElementById('alert-msg').innerText = msg; document.getElementById('alert-modal').classList.remove('hidden'); speak(msg); }
+        
+        function parseDate(d, t) { 
+            if (!d) return new Date(0);
+            if (d.includes(',')) {
+                let dtStr = d.replace(/"/g, '');
+                const parts = dtStr.split(',');
+                if (parts.length >= 2) {
+                    const dParts = parts[0].trim().split('/');
+                    if (dParts.length === 3) {
+                        let year = parseInt(dParts[2]);
+                        if (year > 2500) year -= 543;
+                        return new Date(`${year}-${dParts[1].padStart(2,'0')}-${dParts[0].padStart(2,'0')}T${parts[1].trim()}`);
+                    }
+                }
+                return new Date(dtStr);
+            }
+            const p = d.split('/');
+            const tp = (t || "00:00:00").split(':'); 
+            if (p.length < 3) return new Date(0); 
+            let year = parseInt(p[2]);
+            if (year > 2500) year -= 543; 
+            return new Date(year, p[1]-1, p[0], tp[0], tp[1], tp[2]); 
+        }
+
+        function getFilteredData(arr) {
+            if (currentTimeFilter === 'all') return arr;
+            const now = new Date();
+            return arr.filter(r => {
+                const rd = parseDate(r[0], r[1]);
+                if (currentTimeFilter === 'daily') return rd.toDateString() === now.toDateString();
+                if (currentTimeFilter === 'monthly') return rd.getMonth() === now.getMonth() && rd.getFullYear() === now.getFullYear();
+                if (currentTimeFilter === 'custom' && customDateValue) 
+                {
+                    const target = new Date(customDateValue);
+                    return rd.toDateString() === target.toDateString();
+                }
+                return true;
+            });
+        }
+
+        function setTimeFilter(f, val = null) {
+            currentTimeFilter = f;
+            customDateValue = val;
+            currentPage = 1; selectedRowKeys.clear(); updateBulkDeleteUI();
+            document.querySelectorAll('.filter-btn').forEach(b => b.classList.toggle('active', b.id === `filter-${f}`));
+            if (currentView === 'overview') refreshOverview();
+            else { renderTable(); updateStats(); }
+            showToast(`เปลี่ยนตัวกรองเรียบร้อยแล้วค่ะ`, 'info');
+        }
+
+        function switchView(v) {
+            currentView = v;
+            currentPage = 1; editingRealIdx = -1; selectedRowKeys.clear(); updateBulkDeleteUI();
+            document.querySelectorAll('nav button').forEach(b => b.classList.toggle('nav-active', b.id === `nav-${v}`));
+            document.getElementById('view-title').innerText = CONFIG[v].title;
+            document.getElementById('view-desc').innerText = CONFIG[v].desc;
+            const mainArea = document.getElementById('main-content-area');
+            mainArea.classList.remove('view-animate'); void mainArea.offsetWidth; mainArea.classList.add('view-animate');
+            if (v === 'overview') {
+                document.getElementById('overview-content').classList.remove('hidden');
+                document.getElementById('management-content').classList.add('hidden');
+                refreshOverview();
+            } else {
+                document.getElementById('overview-content').classList.add('hidden');
+                document.getElementById('management-content').classList.remove('hidden');
+                renderForm(v); renderTable(); updateStats();
+            }
+            speak(`เปิดหน้า${CONFIG[v].title}`);
+        }
+
+        function renderForm(v) {
+            const form = document.getElementById('main-form');
+            const container = document.getElementById('form-container');
+            const now = new Date(); 
+            const today = now.toISOString().split('T')[0];
+            const nowTime = now.toTimeString().split(' ')[0].substring(0, 5);
+            const isEditing = editingRealIdx > -1;
+            container.className = isEditing ?
+                "card p-8 soft-shadow bg-sky-50/30 border-sky-200 border-2" : "card p-8 soft-shadow bg-white border-orange-100 border-dashed border-2";
+            form.innerHTML = CONFIG[v].fields.map(f => {
+                let defaultValue = stickyValues[v][f.name] || '';
+                if (f.name === 'date' && !defaultValue) defaultValue = today;
+                if (f.name === 'time' && !defaultValue) defaultValue = nowTime;
+                if (f.name === 'datetime' && !defaultValue) defaultValue = now.toISOString().slice(0,16);
+
+                if (f.type === 'select') {
+                    return `
+                    <div class="flex flex-col gap-2">
+                        <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest">${f.label}</label>
+                        <select name="${f.name}" id="field-${f.name}" class="input-clean bg-slate-50/50">
+                            ${f.options.map(o => `<option value="${o}" ${o===defaultValue?'selected':''}>${o}</option>`).join('')}
+                        </select>
+                    </div>`;
+                }
+
+                return `
+                <div class="flex flex-col gap-2">
+                    <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest">${f.label}</label>
+                    <input type="${f.type}" name="${f.name}" id="field-${f.name}" value="${defaultValue}" required class="input-clean">
+                </div>`;
+            }).join('') + `
+            <div class="flex gap-2">
+                <button type="submit" class="${isEditing ? 'bg-sky-500 hover:bg-sky-600' : 'bg-orange-500 hover:bg-orange-600'} text-white font-bold py-2.5 px-4 rounded-xl text-sm transition-all shadow-lg shadow-orange-100 mt-2 flex-1 hover:scale-[1.02] active:scale-[0.98]">
+                    ${isEditing ? 'อัปเดตข้อมูล' : 'บันทึกรายการ'}
+                </button>
+                ${isEditing ? `<button type="button" onclick="cancelEdit()" class="bg-slate-200 text-slate-500 font-bold py-2.5 px-4 rounded-xl text-sm mt-2 hover:bg-slate-300 transition-colors">ยกเลิก</button>` : ''}
+            </div>`;
+        }
+
+        function cancelEdit() { editingRealIdx = -1; renderForm(currentView);
+        }
+
+        async function handleFormSubmit(e) {
+            e.preventDefault();
+            if (!user) return;
+            const fd = new FormData(e.target);
+            const dataObj = Object.fromEntries(fd.entries());
+            
+            Object.keys(dataObj).forEach(k => stickyValues[currentView][k] = dataObj[k]);
+            let entry = [];
+            if (currentView === 'fix') {
+                const dt = new Date(dataObj.datetime);
+                const dtStr = `"${dt.getDate()}/${dt.getMonth()+1}/${dt.getFullYear()}, ${dt.getHours()}:${dt.getMinutes().toString().padStart(2,'0')}:${dt.getSeconds().toString().padStart(2,'0')}"`;
+                entry = [dtStr, dataObj.photo_no, dataObj.type, dataObj.sku, dataObj.orderid];
+            } else {
+                const dateParts = dataObj.date.split('-');
+                const dateStr = `${dateParts[2]}/${dateParts[1]}/${dateParts[0]}`;
+                let timeStr = dataObj.time; if (timeStr.split(':').length === 2) timeStr += ":00";
+                entry = [dateStr, timeStr];
+                CONFIG[currentView].fields.forEach(f => { if(f.name!=='date'&&f.name!=='time') entry.push(dataObj[f.name]); });
+            }
+            
+            try {
+                if (editingRealIdx > -1) {
+                    const sorted = [...getFilteredData(rawData[currentView])].sort((a,b) => parseDate(b[0],b[1]) - parseDate(a[0],a[1]));
+                    const target = sorted[editingRealIdx];
+                    entry.push(target[target.length - 1]); // keep status
+                    const q = collection(db, 'artifacts', appId, 'public', 'data', currentView);
+                    onSnapshot(q, async (snapshot) => {
+                        const targetDoc = snapshot.docs.find(d => JSON.stringify(d.data().data) === JSON.stringify(target));
+                        if (targetDoc) await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', currentView, targetDoc.id), { data: entry });
+                    }, (e)=>{}, {once: true});
+                    editingRealIdx = -1;
+                    showToast("อัปเดตสำเร็จ");
+                } else {
+                    entry.push('กำลังทำ');
+                    await addDoc(collection(db, 'artifacts', appId, 'public', 'data', currentView), { data: entry, timestamp: new Date() });
+                    showToast("บันทึกสำเร็จ");
+                }
+                renderForm(currentView);
+            } catch (err) { showToast("เกิดข้อผิดพลาด", "error"); }
+        }
+
+        async function toggleStatus(view, globalIdx) {
+            if (!user) return;
+            const allInView = [...getFilteredData(rawData[view])].sort((a,b) => parseDate(b[0],b[1]) - parseDate(a[0],a[1]));
+            const targetRow = allInView[globalIdx];
+            if (!targetRow) return;
+            let nextStatus = (targetRow[targetRow.length - 1] === 'เสร็จแล้ว' || targetRow[targetRow.length - 1] === 'TRUE') ? 'กำลังทำ' : 'เสร็จแล้ว';
+            const updatedRow = [...targetRow]; updatedRow[updatedRow.length - 1] = nextStatus;
+            const q = collection(db, 'artifacts', appId, 'public', 'data', view);
+            onSnapshot(q, async (snapshot) => {
+                const targetDoc = snapshot.docs.find(d => JSON.stringify(d.data().data) === JSON.stringify(targetRow));
+                if (targetDoc) await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', view, targetDoc.id), { data: updatedRow });
+            }, (e) => {}, { once: true });
+        }
+
+        async function deleteRow(v, globalIdx) {
+            if (!user) return;
+            if(!confirm("ลบรายการนี้?")) return;
+            const allSortedData = [...getFilteredData(rawData[v])].sort((a,b) => parseDate(b[0],b[1]) - parseDate(a[0],a[1]));
+            const target = allSortedData[globalIdx];
+            const q = collection(db, 'artifacts', appId, 'public', 'data', v);
+            onSnapshot(q, async (snapshot) => {
+                const targetDoc = snapshot.docs.find(d => JSON.stringify(d.data().data) === JSON.stringify(target));
+                if (targetDoc) await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', v, targetDoc.id));
+            }, (e) => {}, { once: true });
+        }
+
+        function toggleRowSelection(rowJson) {
+            if (selectedRowKeys.has(rowJson)) selectedRowKeys.delete(rowJson);
+            else selectedRowKeys.add(rowJson);
+            updateBulkDeleteUI();
+            renderTable();
+        }
+
+        function toggleAllSelection(isChecked) {
+            const allInView = [...getFilteredData(rawData[currentView])].sort((a,b) => parseDate(b[0],b[1]) - parseDate(a[0],a[1]));
+            const totalItems = allInView.length;
+            const start = (currentPage - 1) * itemsPerPage;
+            const displayData = allInView.slice(start, start + itemsPerPage);
+            displayData.forEach(row => {
+                const key = JSON.stringify(row);
+                if (isChecked) selectedRowKeys.add(key);
+                else selectedRowKeys.delete(key);
+            });
+            updateBulkDeleteUI();
+            renderTable();
+        }
+
+        function updateBulkDeleteUI() {
+            const btn = document.getElementById('bulk-delete-btn');
+            const count = selectedRowKeys.size;
+            if (count > 0) {
+                btn.innerText = `ลบที่เลือก (${count})`;
+                btn.classList.remove('hidden');
+            } else {
+                btn.classList.add('hidden');
+            }
+        }
+
+        async function deleteSelectedRows() {
+            if (!user || selectedRowKeys.size === 0) return;
+            if (!confirm(`ยืนยันการลบทั้งหมด ${selectedRowKeys.size} รายการ?`)) return;
+            
+            const keysToDelete = Array.from(selectedRowKeys);
+            const q = collection(db, 'artifacts', appId, 'public', 'data', currentView);
+            onSnapshot(q, async (snapshot) => {
+                let deletedCount = 0;
+                for (const rowJson of keysToDelete) {
+                    const targetData = JSON.parse(rowJson);
+                    const targetDoc = snapshot.docs.find(d => JSON.stringify(d.data().data) === JSON.stringify(targetData));
+                    if (targetDoc) {
+                        await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', currentView, targetDoc.id));
+                        deletedCount++;
+                    }
+                }
+                selectedRowKeys.clear();
+                updateBulkDeleteUI();
+                showToast(`ลบสำเร็จ ${deletedCount} รายการ`);
+            }, (e) => {}, { once: true });
+        }
+
+        function editRow(v, globalIdx) {
+            const allSortedData = [...getFilteredData(rawData[v])].sort((a,b) => parseDate(b[0],b[1]) - parseDate(a[0],a[1]));
+            const target = allSortedData[globalIdx];
+            editingRealIdx = globalIdx;
+            renderForm(v);
+            if (v === 'fix') {
+                const dtStr = target[0].toString().replace(/"/g, '');
+                const dt = parseDate(dtStr);
+                const localStr = new Date(dt.getTime() - (dt.getTimezoneOffset() * 60000)).toISOString().slice(0, 16);
+                document.getElementById('field-datetime').value = localStr;
+                document.getElementById('field-photo_no').value = target[1];
+                document.getElementById('field-type').value = target[2];
+                document.getElementById('field-sku').value = target[3];
+                document.getElementById('field-orderid').value = target[4];
+            } else {
+                let dateParts = target[0].split('/');
+                let yr = parseInt(dateParts[2]); if (yr > 2500) yr -= 543;
+                document.getElementById('field-date').value = `${yr}-${dateParts[1].padStart(2, '0')}-${dateParts[0].padStart(2, '0')}`;
+                document.getElementById('field-time').value = target[1].substring(0, 5);
+                CONFIG[v].fields.forEach((f, fIdx) => { if(f.name!=='date'&&f.name!=='time') document.getElementById(`field-${f.name}`).value = target[fIdx+2] || ''; });
+            }
+            document.querySelector('main').scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        function renderTable() {
+            const head = document.getElementById('table-head');
+            const body = document.getElementById('table-body');
+            const info = document.getElementById('pagination-info');
+            const controls = document.getElementById('pagination-controls');
+            const allSortedData = [...getFilteredData(rawData[currentView])].sort((a,b) => parseDate(b[0],b[1]) - parseDate(a[0],a[1]));
+            const totalItems = allSortedData.length;
+            const totalPages = Math.ceil(totalItems / itemsPerPage) || 1;
+            const start = (currentPage - 1) * itemsPerPage;
+            const displayData = allSortedData.slice(start, start + itemsPerPage);
+            
+            // Sync Check-All Checkbox
+            const allSelectedInPage = displayData.length > 0 && displayData.every(row => selectedRowKeys.has(JSON.stringify(row)));
+            info.innerText = `หน้า ${currentPage} จาก ${totalPages}`;
+            head.innerHTML = `<th class="w-12"><input type="checkbox" class="check-all-box" onchange="toggleAllSelection(this.checked)" ${allSelectedInPage?'checked':''}></th>` + CONFIG[currentView].cols.map(c => `<th>${c}</th>`).join('') + `<th class="text-right">จัดการ</th>`;
+            body.innerHTML = displayData.map((row, localIdx) => {
+                const globalIdx = start + localIdx;
+                const rowJson = JSON.stringify(row);
+                const isSelected = selectedRowKeys.has(rowJson);
+                const statusVal = row[row.length - 1];
+                let statusClass = "px-3 py-1 rounded-full text-[10px] font-bold transition-all " + (statusVal === 'เสร็จแล้ว' || statusVal === 'TRUE' ? "bg-emerald-50 text-emerald-500" : "bg-orange-50 text-orange-500");
+                let cellsHtml = `<td><input type="checkbox" class="check-all-box" onchange='toggleRowSelection(${JSON.stringify(rowJson)})' ${isSelected?'checked':''}></td>`;
+                row.forEach((cell, cIdx) => {
+                    const cleanCell = (cell || '-').toString().replace(/"/g, '');
+                    if (cIdx === row.length - 1) cellsHtml += `<td><button onclick="toggleStatus('${currentView}', ${globalIdx})" class="${statusClass}">${statusVal === 'TRUE' ? 'เสร็จแล้ว' : cleanCell}</button></td>`;
+                    else cellsHtml += `<td>${cleanCell}</td>`;
+                });
+                return `<tr class="group animate-in fade-in duration-300 ${isSelected?'bg-orange-50/30':''}">
+                    ${cellsHtml}
+                    <td class="text-right">
+                        <div class="flex justify-end gap-3">
+                            <button onclick="editRow('${currentView}', ${globalIdx})" class="text-sky-400 opacity-0 group-hover:opacity-100 font-bold text-xs">แก้ไข</button>
+                            <button onclick="deleteRow('${currentView}', ${globalIdx})" class="text-slate-200 group-hover:text-rose-400 font-bold text-xs">ลบ</button>
+                        </div>
+                    </td>
+                </tr>`;
+            }).join('') || '<tr><td colspan="20" class="text-center py-24 italic text-slate-300">ไม่มีข้อมูล</td></tr>';
+            let pBtns = ''; if (totalPages > 1) {
+                pBtns += `<button onclick="changePage(${currentPage-1})" class="${currentPage===1?'opacity-30 pointer-events-none':''} px-3 py-1 rounded-lg border border-orange-100 text-orange-400 text-[10px] font-bold">ก่อนหน้า</button>`;
+                for (let i = 1; i <= totalPages; i++) pBtns += `<button onclick="changePage(${i})" class="w-8 h-8 rounded-lg border text-[10px] font-bold ${i===currentPage?'bg-orange-500 text-white':'text-slate-400'}">${i}</button>`;
+                pBtns += `<button onclick="changePage(${currentPage+1})" class="${currentPage===totalPages?'opacity-30 pointer-events-none':''} px-3 py-1 rounded-lg border border-orange-100 text-orange-400 text-[10px] font-bold">ถัดไป</button>`;
+            }
+            controls.innerHTML = pBtns;
+        }
+
+        function changePage(p) { currentPage = p; renderTable();
+        }
+        
+        function updateStats() {
+            const o = getFilteredData(rawData.orders);
+            const r = getFilteredData(rawData.redo); const f = getFilteredData(rawData.fix);
+            const total = o.reduce((s, x) => s + (parseInt(x[3]) || 0), 0);
+            const totalRedo = r.reduce((s, x) => s + (parseInt(x[3]) || 0), 0);
+            const pending = f.filter(x => x[x.length-1] !== 'เสร็จแล้ว' && x[x.length-1] !== 'TRUE').length;
+            const items = [{ label: "ยอดผลิตรวมทั้งหมด", val: total.toLocaleString(), color: "text-orange-500", bg: "bg-orange-50" },{ label: "จำนวนงานเสียรวม", val: totalRedo.toLocaleString(), color: "text-rose-500", bg: "bg-rose-50" },{ label: "งานแก้ที่ค้างอยู่", val: pending, color: "text-sky-500", bg: "bg-sky-50" }];
+            document.getElementById('stats-grid').innerHTML = items.map(s => `<div class="card p-6 soft-shadow flex flex-col justify-between h-32 relative overflow-hidden group hover:scale-[1.03]"><div class="absolute -right-2 -bottom-2 w-12 h-12 ${s.bg} rounded-full opacity-20 group-hover:scale-150 transition-transform duration-500"></div><p class="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] relative z-10">${s.label}</p><h4 class="text-2xl font-black ${s.color} relative z-10">${s.val}</h4></div>`).join('');
+        }
+
+        function refreshOverview() {
+            updateStats();
+            Object.values(charts).forEach(c => c && c.destroy());
+            const orders = getFilteredData(rawData.orders); const redo = getFilteredData(rawData.redo); const fix = getFilteredData(rawData.fix);
+            const labels = []; for (let h = 8; h <= 23; h++) labels.push(`${h.toString().padStart(2, '0')}:30`);
+            const getBucket = (t) => { if(!t) return null; const p = t.toString().includes(',') ? t.toString().split(',')[1].trim().split(':') : t.toString().split(':');
+            const h = parseInt(p[0]); if (isNaN(h) || h < 8) return null; return `${h.toString().padStart(2, '0')}:30`; };
+            const depts = ['งานเรียง', 'งานล็อต', 'งานBY', 'งานเฉินผิง', 'งานด่วน'];
+            const hrMap = {};
+            orders.forEach(r => { const b = getBucket(r[1]); if (!b) return; const d = r[4]; const v = parseInt(r[3]) || 0; if(!hrMap[b]) hrMap[b] = {}; if (depts.includes(d)) hrMap[b][d] = (hrMap[b][d] || 0) + v; });
+            const deptDatasets = depts.map((d, i) => { const colors = [themeColors.orange, themeColors.blue, themeColors.indigo, themeColors.amber, themeColors.rose]; return { label: d, data: labels.map(l => (hrMap[l] && hrMap[l][d]) || 0), borderColor: colors[i], backgroundColor: colors[i] + '22', borderWidth: 2, fill: true, tension: 0.3 } });
+            charts.ovOrder = new Chart(document.getElementById('ovOrderChart'), { type: 'line', data: { labels, datasets: deptDatasets }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { boxWidth: 8, font: { size: 10 } } } } } });
+            const redoHrMap = {}; redo.forEach(r => { const b = getBucket(r[1]); if (b) redoHrMap[b] = (redoHrMap[b] || 0) + (parseInt(r[3]) || 0); });
+            const fixHrMap = {}; fix.forEach(r => { const b = getBucket(r[0]); if (b) fixHrMap[b] = (fixHrMap[b] || 0) + 1; });
+            charts.ovFixRedo = new Chart(document.getElementById('ovFixRedoChart'), { type: 'bar', data: { labels, datasets: [{ label: 'งานเสีย', data: labels.map(l => redoHrMap[l] || 0), backgroundColor: themeColors.rose, borderRadius: 4 },{ label: 'งานแก้', data: labels.map(l => fixHrMap[l] || 0), backgroundColor: themeColors.indigo, borderRadius: 4 }] }, options: { responsive: true, maintainAspectRatio: false } });
+            
+            const pOrders = orders.filter(o => (o[o.length-1] !== 'เสร็จแล้ว' && o[o.length-1] !== 'TRUE')).map(o => ({ t: 'งานผลิต', id: o[2], d: o[0], h: o[1], c: 'text-orange-400', view: 'orders' }));
+            const pFix = fix.filter(f => (f[f.length-1] !== 'เสร็จแล้ว' && f[f.length-1] !== 'TRUE')).map(f => ({ t: 'งานแก้', id: f[4]||f[3], d: f[0], h: '', c: 'text-indigo-400', view: 'fix' }));
+            const allPending = [...pOrders, ...pFix].sort((a,b) => parseDate(b.d, b.h) - parseDate(a.d, a.h)).slice(0, 10);
+            document.getElementById('ovRecentList').innerHTML = allPending.map(i => `<div class="px-8 py-4 flex justify-between items-center bg-white hover:bg-orange-50/20"><div><span class="text-[9px] font-black ${i.c} uppercase">${i.t} #${i.id}</span><p class="text-[10px] text-slate-300 font-bold">${i.d.toString().replace(/"/g,'')}</p></div><button onclick="directToggleStatus('${i.view}', '${i.id}')" class="px-3 py-1 bg-orange-50 text-orange-500 text-[9px] font-black rounded-lg">กำลังทำ</button></div>`).join('') || '<div class="py-16 text-center text-slate-200">ไม่มีงานค้าง</div>';
+        }
+
+        function directToggleStatus(view, id) {
+            const row = rawData[view].find(r => r[2] == id || r[3] == id || r[4] == id);
+            if(row) toggleStatus(view, [...getFilteredData(rawData[view])].sort((a,b) => parseDate(b[0],b[1]) - parseDate(a[0],a[1])).indexOf(row));
+        }
+
+        function filterTableSearch() { const q = document.getElementById('search').value.toLowerCase(); document.querySelectorAll('#table-body tr').forEach(r => r.style.display = r.innerText.toLowerCase().includes(q) ? '' : 'none'); }
+
+        async function handleFiles(e) {
+            if (!user) return;
+            const files = Array.from(e.target.files);
+            for (const file of files) {
+                const reader = new FileReader();
+                reader.onload = async (ev) => {
+                    const lines = ev.target.result.split('\n').filter(l => l.trim());
+                    const header = lines[0].toLowerCase();
+                    const data = lines.slice(1).map(l => l.split(',').map(c => c.trim().replace(/^"|"$/g, '')));
+                    let targetCol = header.includes('แผนก') ? "orders" : header.includes('sku') ? "fix" : header.includes('ครั้งที่') ? "redo" : "";
+                    if (targetCol) {
+                        for (const row of data) if(row.length>0) await addDoc(collection(db, 'artifacts', appId, 'public', 'data', targetCol), { data: row, timestamp: new Date() });
+                        showToast("อัปโหลดสำเร็จ");
+                    }
+                };
+                reader.readAsText(file);
+            }
+        }
+
+        function exportAllData() {
+            let csv = "\ufeffType,Date,Time,V1,V2,V3,V4,V5,Status\n";
+            Object.keys(rawData).forEach(k => rawData[k].forEach(r => csv += `${k.toUpperCase()},${r.join(',')}\n`));
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement("a");
+            link.href = URL.createObjectURL(blob); link.download = `Report_Production.csv`; link.click();
+        }
+
+        window.onload = async () => { await initAuth();
+        switchView('overview'); };
+    </script>
+</body>
+</html>
