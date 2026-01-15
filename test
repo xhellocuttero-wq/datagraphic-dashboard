@@ -304,6 +304,24 @@
         let charts = {};
         let editingRealIdx = -1;
         let user = null;
+        let renderTimeout;
+function syncData() {
+    if (!user) return;
+    const collections = ['orders', 'fix', 'redo', 'problems'];
+    collections.forEach(col => {
+        const q = collection(db, 'artifacts', appId, 'public', 'data', col);
+        onSnapshot(q, (snapshot) => {
+            rawData[col] = snapshot.docs.map(doc => ({ firebaseId: doc.id, data: doc.data().data }))
+                .sort((a,b) => parseDate(b.data[0], b.data[1]) - parseDate(a.data[0], a.data[1]))
+                .map(item => item.data);
+            
+            // ใช้ Debounce แทนการเรียกตรงๆ
+            debouncedSync(); 
+        }, (error) => {
+            console.error("Snapshot error:", error);
+        });
+    });
+}
         let selectedRowKeys = new Set(); // Stores JSON strings of row data for uniqueness
 
         let stickyValues = {
@@ -688,52 +706,76 @@
         }
 
         function renderTable() {
-            const head = document.getElementById('table-head');
-            const body = document.getElementById('table-body');
-            const info = document.getElementById('pagination-info');
-            const controls = document.getElementById('pagination-controls');
-            const allSortedData = [...getFilteredData(rawData[currentView])].sort((a,b) => parseDate(b[0],b[1]) - parseDate(a[0],a[1]));
-            const totalItems = allSortedData.length;
-            const totalPages = Math.ceil(totalItems / itemsPerPage) || 1;
-            const start = (currentPage - 1) * itemsPerPage;
-            const displayData = allSortedData.slice(start, start + itemsPerPage);
-            
-            // Sync Check-All Checkbox
-            const allSelectedInPage = displayData.length > 0 && displayData.every(row => selectedRowKeys.has(JSON.stringify(row)));
+    const head = document.getElementById('table-head');
+    const body = document.getElementById('table-body');
+    const info = document.getElementById('pagination-info');
+    const controls = document.getElementById('pagination-controls');
+    
+    // 1. ดึงข้อมูลพื้นฐาน
+    let allFilteredData = [...getFilteredData(rawData[currentView])].sort((a,b) => parseDate(b[0],b[1]) - parseDate(a[0],a[1]));
+    
+    // 2. กรองข้อมูลตาม Search (ถ้ามี)
+    const searchTerm = document.getElementById('search').value.toLowerCase();
+    if (searchTerm) {
+        allFilteredData = allFilteredData.filter(row => 
+            row.some(cell => cell && cell.toString().toLowerCase().includes(searchTerm))
+        );
+    }
 
-            info.innerText = `หน้า ${currentPage} จาก ${totalPages}`;
-            head.innerHTML = `<th class="w-12"><input type="checkbox" class="check-all-box" onchange="toggleAllSelection(this.checked)" ${allSelectedInPage?'checked':''}></th>` + CONFIG[currentView].cols.map(c => `<th>${c}</th>`).join('') + `<th class="text-right">จัดการ</th>`;
-            body.innerHTML = displayData.map((row, localIdx) => {
-                const globalIdx = start + localIdx;
-                const rowJson = JSON.stringify(row);
-                const isSelected = selectedRowKeys.has(rowJson);
-                const statusVal = row[row.length - 1];
-                let statusClass = "px-3 py-1 rounded-full text-[10px] font-bold transition-all " + (statusVal === 'เสร็จแล้ว' || statusVal === 'TRUE' ? "bg-emerald-50 text-emerald-500" : "bg-orange-50 text-orange-500");
-                let cellsHtml = `<td><input type="checkbox" class="check-all-box" onchange='toggleRowSelection(${JSON.stringify(rowJson)})' ${isSelected?'checked':''}></td>`;
-                row.forEach((cell, cIdx) => {
-                    const cleanCell = (cell || '-').toString().replace(/"/g, '');
-                    if (cIdx === row.length - 1) cellsHtml += `<td><button onclick="toggleStatus('${currentView}', ${globalIdx})" class="${statusClass}">${statusVal === 'TRUE' ? 'เสร็จแล้ว' : cleanCell}</button></td>`;
-                    else cellsHtml += `<td>${cleanCell}</td>`;
-                });
-                return `<tr class="group animate-in fade-in duration-300 ${isSelected?'bg-orange-50/30':''}">
-                    ${cellsHtml}
-                    <td class="text-right">
-                        <div class="flex justify-end gap-3">
-                            <button onclick="editRow('${currentView}', ${globalIdx})" class="text-sky-400 opacity-0 group-hover:opacity-100 font-bold text-xs">แก้ไข</button>
-                            <button onclick="deleteRow('${currentView}', ${globalIdx})" class="text-slate-200 group-hover:text-rose-400 font-bold text-xs">ลบ</button>
-                        </div>
-                    </td>
-                </tr>`;
-            }).join('') || '<tr><td colspan="20" class="text-center py-24 italic text-slate-300">ไม่มีข้อมูล</td></tr>';
-            
-            let pBtns = ''; if (totalPages > 1) {
-                pBtns += `<button onclick="changePage(${currentPage-1})" class="${currentPage===1?'opacity-30 pointer-events-none':''} px-3 py-1 rounded-lg border border-orange-100 text-orange-400 text-[10px] font-bold">ก่อนหน้า</button>`;
-                for (let i = 1; i <= totalPages; i++) pBtns += `<button onclick="changePage(${i})" class="w-8 h-8 rounded-lg border text-[10px] font-bold ${i===currentPage?'bg-orange-500 text-white':'text-slate-400'}">${i}</button>`;
-                pBtns += `<button onclick="changePage(${currentPage+1})" class="${currentPage===totalPages?'opacity-30 pointer-events-none':''} px-3 py-1 rounded-lg border border-orange-100 text-orange-400 text-[10px] font-bold">ถัดไป</button>`;
+    const totalItems = allFilteredData.length;
+    const totalPages = Math.ceil(totalItems / itemsPerPage) || 1;
+    const start = (currentPage - 1) * itemsPerPage;
+    const displayData = allFilteredData.slice(start, start + itemsPerPage);
+    
+    // Sync Check-All Checkbox
+    const allSelectedInPage = displayData.length > 0 && displayData.every(row => selectedRowKeys.has(JSON.stringify(row)));
+
+    info.innerText = `หน้า ${currentPage} จาก ${totalPages} (พบ ${totalItems} รายการ)`;
+    
+    head.innerHTML = `<th class="w-12"><input type="checkbox" class="check-all-box" onchange="toggleAllSelection(this.checked)" ${allSelectedInPage?'checked':''}></th>` + CONFIG[currentView].cols.map(c => `<th>${c}</th>`).join('') + `<th class="text-right">จัดการ</th>`;
+    
+    // สร้าง HTML โดยใช้ Array join เพื่อประสิทธิภาพสูงสุด
+    const rowsHtml = displayData.map((row, localIdx) => {
+        const globalIdxInFullList = [...getFilteredData(rawData[currentView])].sort((a,b) => parseDate(b[0],b[1]) - parseDate(a[0],a[1])).indexOf(row);
+        const rowJson = JSON.stringify(row);
+        const isSelected = selectedRowKeys.has(rowJson);
+        const statusVal = row[row.length - 1];
+        
+        let statusClass = "px-3 py-1 rounded-full text-[10px] font-bold " + (statusVal === 'เสร็จแล้ว' || statusVal === 'TRUE' ? "bg-emerald-50 text-emerald-500" : "bg-orange-50 text-orange-500");
+        
+        let cellsHtml = `<td><input type="checkbox" class="check-all-box" onchange='toggleRowSelection(${JSON.stringify(rowJson)})' ${isSelected?'checked':''}></td>`;
+        
+        row.forEach((cell, cIdx) => {
+            const cleanCell = (cell || '-').toString().replace(/"/g, '');
+            if (cIdx === row.length - 1) {
+                cellsHtml += `<td><button onclick="toggleStatus('${currentView}', ${globalIdxInFullList})" class="${statusClass}">${statusVal === 'TRUE' ? 'เสร็จแล้ว' : cleanCell}</button></td>`;
+            } else {
+                cellsHtml += `<td>${cleanCell}</td>`;
             }
-            controls.innerHTML = pBtns;
-        }
+        });
 
+        return `<tr class="group ${isSelected?'bg-orange-50/30':''}">
+            ${cellsHtml}
+            <td class="text-right">
+                <div class="flex justify-end gap-3">
+                    <button onclick="editRow('${currentView}', ${globalIdxInFullList})" class="text-sky-400 opacity-0 group-hover:opacity-100 font-bold text-xs">แก้ไข</button>
+                    <button onclick="deleteRow('${currentView}', ${globalIdxInFullList})" class="text-slate-200 group-hover:text-rose-400 font-bold text-xs">ลบ</button>
+                </div>
+            </td>
+        </tr>`;
+    }).join('');
+
+    body.innerHTML = rowsHtml || '<tr><td colspan="20" class="text-center py-24 italic text-slate-300">ไม่มีข้อมูลที่ค้นหา</td></tr>';
+    
+    // ส่วนปุ่ม Pagination
+    renderPaginationButtons(totalPages, controls);
+}
+
+// แยกฟังก์ชัน Search ให้ทำงานเบาลง
+function filterTableSearch() { 
+    currentPage = 1; 
+    renderTable(); 
+}
         function changePage(p) { currentPage = p; renderTable(); }
         
         function updateStats() {
