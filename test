@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DATA GRAPHIC | WARROOM Edition (Fixed)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Sarabun:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <style>
+        :root { --primary: #fb923c; --secondary: #38bdf8; --bg-main: #fdfcfb; --card-bg: #ffffff; --text-main: #334155; --text-sub: #94a3b8; }
+        body { font-family: 'Inter', 'Sarabun', sans-serif; background-color: var(--bg-main); color: var(--text-main); transition: all 0.3s ease; }
+        .soft-shadow { box-shadow: 0 10px 25px -5px rgba(251, 146, 60, 0.05), 0 8px 10px -6px rgba(56, 189, 248, 0.03); }
+        .card { background: var(--card-bg); border: 1px solid #f8fafc; border-radius: 1.25rem; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
+        .card:hover { transform: translateY(-2px); box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.05); }
+        .nav-active { color: var(--primary); background: #fff7ed; font-weight: 600; box-shadow: inset 4px 0 0 var(--primary); }
+        .filter-btn { font-size: 11px; font-weight: 600; padding: 6px 14px; border-radius: 10px; color: var(--text-sub); transition: all 0.2s; }
+        .filter-btn.active { color: white; background: var(--primary); box-shadow: 0 4px 12px rgba(251, 146, 60, 0.3); }
+        .input-clean { background: #ffffff; border: 1px solid #e2e8f0; border-radius: 10px; padding: 8px 12px; font-size: 14px; outline: none; transition: all 0.2s; }
+        .input-clean:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(251, 146, 60, 0.1); }
+        th { font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-sub); padding: 14px 24px; border-bottom: 2px solid #fff7ed; }
+        td { padding: 12px 24px; font-size: 14px; border-bottom: 1px solid #fdfcfb; }
+        tr:hover { background: #fffbf7; }
+        .toast { animation: slideIn 0.3s ease-out forwards; }
+        @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+        .datepicker-wrapper { position: relative; display: flex; align-items: center; justify-content: center; width: 32px; height: 32px; border-radius: 8px; cursor: pointer; }
+        .datepicker-wrapper input[type="date"] { position: absolute; opacity: 0; width: 100%; height: 100%; cursor: pointer; z-index: 2; }
+        .check-all-box { width: 16px; height: 16px; accent-color: #fb923c; cursor: pointer; }
+    </style>
+</head>
+<body class="flex h-screen overflow-hidden">
+
+    <div id="toast-container" class="fixed top-6 right-6 z-[200] flex flex-col gap-3"></div>
+
+    <aside class="w-64 h-full bg-white border-r border-orange-50 flex flex-col p-6 z-50">
+        <div class="mb-10 flex items-center gap-3">
+            <div class="w-10 h-10 bg-gradient-to-br from-orange-400 to-orange-500 rounded-xl flex items-center justify-center shadow-lg shadow-orange-100">
+                <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+            </div>
+            <div>
+                <h1 class="text-lg font-bold tracking-tight text-slate-800">DATA GRAPHIC</h1>
+                <p class="text-[10px] text-orange-300 font-bold tracking-widest">WARROOM</p>
+            </div>
+        </div>
+        <nav class="space-y-1.5 flex-1">
+            <button onclick="switchView('overview')" id="nav-overview" class="w-full flex items-center gap-4 px-4 py-3 rounded-xl transition-all nav-active">
+                <span class="text-sm">ภาพรวมระบบ</span>
+            </button>
+            <button onclick="switchView('orders')" id="nav-orders" class="w-full flex items-center gap-4 px-4 py-3 rounded-xl transition-all text-slate-400 hover:bg-orange-50">
+                <span class="text-sm">บันทึกงานผลิต</span>
+            </button>
+            <button onclick="switchView('fix')" id="nav-fix" class="w-full flex items-center gap-4 px-4 py-3 rounded-xl transition-all text-slate-400 hover:bg-orange-50">
+                <span class="text-sm">บันทึกงานแก้</span>
+            </button>
+        </nav>
+        <div class="mt-auto space-y-3">
+            <div id="user-display" class="text-[10px] text-slate-400 font-bold px-2">กำลังยืนยันตัวตน...</div>
+            <button onclick="exportAllData()" class="w-full py-3 rounded-xl border border-orange-100 text-orange-400 text-xs font-bold hover:bg-orange-50">ดาวน์โหลด Report</button>
+        </div>
+    </aside>
+
+    <main id="main-content-area" class="flex-1 flex flex-col p-8 overflow-y-auto">
+        <div class="flex justify-between items-center mb-8">
+            <div>
+                <h2 id="view-title" class="text-2xl font-extrabold text-slate-800">สรุปผลการทำงาน</h2>
+                <p id="view-desc" class="text-sm text-slate-400">ภาพรวมข้อมูลการผลิตและประสิทธิภาพรายแผนก</p>
+            </div>
+            <div class="flex items-center p-1.5 bg-white rounded-2xl soft-shadow border border-orange-50 gap-1">
+                <button onclick="setTimeFilter('daily')" id="filter-daily" class="filter-btn active">วันนี้</button>
+                <button onclick="setTimeFilter('monthly')" id="filter-monthly" class="filter-btn">เดือนนี้</button>
+                <button onclick="setTimeFilter('all')" id="filter-all" class="filter-btn">ทั้งหมด</button>
+            </div>
+        </div>
+
+        <div id="stats-grid" class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8"></div>
+
+        <div id="overview-content" class="grid grid-cols-1 gap-8">
+            <div class="card p-8 soft-shadow bg-white h-[400px]">
+                <canvas id="ovOrderChart"></canvas>
+            </div>
+        </div>
+
+        <div id="management-content" class="hidden space-y-8">
+            <div id="form-container" class="card p-8 soft-shadow bg-white">
+                <form id="main-form" class="grid grid-cols-1 md:grid-cols-4 gap-4 items-end" onsubmit="handleFormSubmit(event)"></form>
+            </div>
+            <div class="card overflow-hidden soft-shadow bg-white">
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left">
+                        <thead><tr id="table-head"></tr></thead>
+                        <tbody id="table-body"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, collection, onSnapshot, addDoc, updateDoc, deleteDoc, query, orderBy, limit } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // Your Config
+        const firebaseConfig = {
+            apiKey: "AIzaSyA0QWdvnA4ubJ42OAHxnDDJQUHkIFasu3w",
+            authDomain: "data-5c343.firebaseapp.com",
+            projectId: "data-5c343",
+            storageBucket: "data-5c343.firebasestorage.app",
+            messagingSenderId: "555799172632",
+            appId: "1:555799172632:web:ced0d5f789362a9228156d"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+        const appId = 'default-app-id';
+
+        let rawData = { orders: [], fix: [], redo: [], problems: [] };
+        let currentView = 'overview';
+        let currentTimeFilter = 'daily';
+        let charts = {};
+        let editingId = null;
+
+        const CONFIG = {
+            overview: { title: "สรุปผลการทำงาน", desc: "ภาพรวมข้อมูล" },
+            orders: { 
+                title: "บันทึกงานผลิต", cols: ['วันที่', 'เวลา', 'เลขที่งาน', 'จำนวน', 'แผนก', 'สถานะ'],
+                fields: [
+                    { name: 'date', label: 'วันที่', type: 'date' },
+                    { name: 'time', label: 'เวลา', type: 'time' },
+                    { name: 'id', label: 'เลขที่งาน', type: 'number' },
+                    { name: 'count', label: 'จำนวน', type: 'number' },
+                    { name: 'dept', label: 'แผนก', type: 'select', options: ['งานเรียง', 'งานล็อต', 'งานBY'] }
+                ]
+            },
+            fix: { 
+                title: "รายการงานแก้", cols: ['วันที่เวลา', 'รูปที่', 'ประเภท', 'SKU', 'สถานะ'],
+                fields: [
+                    { name: 'datetime', label: 'วันที่และเวลา', type: 'datetime-local' },
+                    { name: 'photo_no', label: 'รูปที่', type: 'number' },
+                    { name: 'type', label: 'ประเภท', type: 'select', options: ['ผิดลาย', 'ผิดสี'] },
+                    { name: 'sku', label: 'รหัสSKU', type: 'text' }
+                ]
+            }
+        };
+
+        // Initialize Auth
+        signInAnonymously(auth).catch(console.error);
+
+        onAuthStateChanged(auth, (user) => {
+            if (user) {
+                document.getElementById('user-display').innerText = `ID: ${user.uid}`;
+                syncData();
+            }
+        });
+
+        // Fixed syncData - No nested snapshots
+        function syncData() {
+            ['orders', 'fix', 'redo', 'problems'].forEach(colName => {
+                const q = query(collection(db, 'artifacts', appId, 'public', 'data', colName), limit(500));
+                onSnapshot(q, (snapshot) => {
+                    rawData[colName] = snapshot.docs.map(doc => ({
+                        firebaseId: doc.id,
+                        data: doc.data().data
+                    }));
+                    refreshUI();
+                }, (err) => console.error("Firestore Error:", err));
+            });
+        }
+
+        function refreshUI() {
+            if (currentView === 'overview') refreshOverview();
+            else { renderTable(); updateStats(); }
+        }
+
+        // CRUD Operations - Optimized
+        async function handleFormSubmit(e) {
+            e.preventDefault();
+            const fd = new FormData(e.target);
+            const dataObj = Object.fromEntries(fd.entries());
+            let entry = [dataObj.date || dataObj.datetime, dataObj.time || ""];
+            
+            // Collect other fields
+            CONFIG[currentView].fields.forEach(f => {
+                if(f.name !== 'date' && f.name !== 'time' && f.name !== 'datetime') entry.push(dataObj[f.name]);
+            });
+
+            try {
+                if (editingId) {
+                    const originalData = rawData[currentView].find(x => x.firebaseId === editingId);
+                    entry.push(originalData.data[originalData.data.length - 1]); // keep status
+                    await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', currentView, editingId), { data: entry });
+                    editingId = null;
+                } else {
+                    entry.push('กำลังทำ');
+                    await addDoc(collection(db, 'artifacts', appId, 'public', 'data', currentView), { data: entry, timestamp: new Date() });
+                }
+                e.target.reset();
+                renderForm(currentView);
+                showToast("สำเร็จ");
+            } catch (err) { showToast("Error", "error"); }
+        }
+
+        async function toggleStatus(view, firebaseId) {
+            const item = rawData[view].find(x => x.firebaseId === firebaseId);
+            if (!item) return;
+            const updatedData = [...item.data];
+            const currentStatus = updatedData[updatedData.length - 1];
+            updatedData[updatedData.length - 1] = (currentStatus === 'เสร็จแล้ว') ? 'กำลังทำ' : 'เสร็จแล้ว';
+            await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', view, firebaseId), { data: updatedData });
+        }
+
+        async function deleteRow(view, firebaseId) {
+            if (!confirm("ลบข้อมูลนี้?")) return;
+            await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', view, firebaseId));
+        }
+
+        // UI Rendering
+        function renderTable() {
+            const head = document.getElementById('table-head');
+            const body = document.getElementById('table-body');
+            const data = rawData[currentView] || [];
+            
+            head.innerHTML = CONFIG[currentView].cols.map(c => `<th>${c}</th>`).join('') + `<th>จัดการ</th>`;
+            body.innerHTML = data.map(item => {
+                const status = item.data[item.data.length - 1];
+                return `<tr>
+                    ${item.data.map(cell => `<td>${cell}</td>`).join('')}
+                    <td class="flex gap-2">
+                        <button onclick="window.toggleStatus('${currentView}', '${item.firebaseId}')" class="text-orange-500 font-bold">สลับสถานะ</button>
+                        <button onclick="window.deleteRow('${currentView}', '${item.firebaseId}')" class="text-red-400">ลบ</button>
+                    </td>
+                </tr>`;
+            }).join('');
+        }
+
+        function renderForm(v) {
+            const form = document.getElementById('main-form');
+            form.innerHTML = CONFIG[v].fields.map(f => `
+                <div class="flex flex-col gap-1">
+                    <label class="text-[10px] font-bold text-slate-400 uppercase">${f.label}</label>
+                    <input type="${f.type}" name="${f.name}" required class="input-clean">
+                </div>
+            `).join('') + `<button type="submit" class="bg-orange-500 text-white p-3 rounded-xl font-bold">บันทึก</button>`;
+        }
+
+        function updateStats() {
+            const total = (rawData.orders || []).length;
+            document.getElementById('stats-grid').innerHTML = `
+                <div class="card p-6 soft-shadow">
+                    <p class="text-[10px] text-slate-400 font-bold uppercase">รายการทั้งหมด</p>
+                    <h4 class="text-2xl font-black text-orange-500">${total}</h4>
+                </div>
+            `;
+        }
+
+        function switchView(v) {
+            currentView = v;
+            document.querySelectorAll('nav button').forEach(b => b.classList.toggle('nav-active', b.id === `nav-${v}`));
+            if (v === 'overview') {
+                document.getElementById('overview-content').classList.remove('hidden');
+                document.getElementById('management-content').classList.add('hidden');
+            } else {
+                document.getElementById('overview-content').classList.add('hidden');
+                document.getElementById('management-content').classList.remove('hidden');
+                renderForm(v);
+                renderTable();
+            }
+        }
+
+        function showToast(m) {
+            const t = document.createElement('div');
+            t.className = "toast bg-slate-800 text-white px-4 py-2 rounded-lg fixed top-4 right-4";
+            t.innerText = m;
+            document.body.appendChild(t);
+            setTimeout(() => t.remove(), 2000);
+        }
+
+        window.toggleStatus = toggleStatus;
+        window.deleteRow = deleteRow;
+        window.switchView = switchView;
+        window.handleFormSubmit = handleFormSubmit;
+
+        window.onload = () => switchView('overview');
+    </script>
+</body>
+</html>
+คำแนะนำการนำไปใช้งาน:
+คุณต้องเปลี่ยน firebaseConfig ในโค้ดข้างบนเป็นค่าจริงของคุณอีกครั้ง (เนื่องจากผมใช้ค่าจากโค้ดเดิมที่คุณส่งมา)
+
+ทำไมถึงประหยัดโควตา?: โค้ดเก่าของคุณมีการใช้ onSnapshot ทุกครั้งที่กดปุ่ม ซึ่งเป็นการสร้าง "ผู้ฟัง" ซ้ำๆ หลายร้อยตัวใน Browser เดียวกัน แต่โค้ดใหม่นี้จะสร้างผู้ฟังเพียง 1 ตัวต่อ 1 คอลเลกชัน เท่านั้น (รวมเป็น 4 ตัว) ประหยัดทรัพยากรไปได้มหาศาลครับ
+
+หากคุณต้องการให้เพิ่มฟังก์ชันการกรองวันที่ (Date Filter) หรือกราฟส่วนอื่นๆ กลับมาเหมือนเดิม สามารถบอกให้ผมปรับปรุงเพิ่มเติมได้ทันทีครับ!
