@@ -315,8 +315,15 @@ function syncData() {
                 .sort((a,b) => parseDate(b.data[0], b.data[1]) - parseDate(a.data[0], a.data[1]))
                 .map(item => item.data);
             
-            // ใช้ Debounce แทนการเรียกตรงๆ
-            debouncedSync(); 
+            // ใช้ Debounce เพื่อลดภาระเครื่อง
+            clearTimeout(renderTimeout);
+            renderTimeout = setTimeout(() => {
+                if (currentView === 'overview') refreshOverview();
+                else {
+                    renderTable();
+                    updateStats();
+                }
+            }, 150); 
         }, (error) => {
             console.error("Snapshot error:", error);
         });
@@ -412,7 +419,7 @@ function syncData() {
                     
                     if (currentView === 'overview') refreshOverview(); 
                     else if (currentView === col || currentView !== 'overview') {
-                        renderTable();
+                        ();
                         updateStats();
                     }
                 }, (error) => {
@@ -493,7 +500,7 @@ function syncData() {
             currentTimeFilter = f; customDateValue = val;
             currentPage = 1; selectedRowKeys.clear(); updateBulkDeleteUI();
             document.querySelectorAll('.filter-btn').forEach(b => b.classList.toggle('active', b.id === `filter-${f}`));
-            if (currentView === 'overview') refreshOverview(); else { renderTable(); updateStats(); }
+            if (currentView === 'overview') refreshOverview(); else { (); updateStats(); }
             showToast(`เปลี่ยนตัวกรองเรียบร้อยแล้วค่ะ`, 'info');
         }
 
@@ -511,7 +518,7 @@ function syncData() {
             } else {
                 document.getElementById('overview-content').classList.add('hidden');
                 document.getElementById('management-content').classList.remove('hidden');
-                renderForm(v); renderTable(); updateStats();
+                renderForm(v); (); updateStats();
             }
             speak(`เปิดหน้า${CONFIG[v].title}`);
         }
@@ -629,7 +636,7 @@ function syncData() {
             if (selectedRowKeys.has(rowJson)) selectedRowKeys.delete(rowJson);
             else selectedRowKeys.add(rowJson);
             updateBulkDeleteUI();
-            renderTable();
+            ();
         }
 
         function toggleAllSelection(isChecked) {
@@ -644,7 +651,7 @@ function syncData() {
                 else selectedRowKeys.delete(key);
             });
             updateBulkDeleteUI();
-            renderTable();
+            ();
         }
 
         function updateBulkDeleteUI() {
@@ -705,7 +712,7 @@ function syncData() {
             document.querySelector('main').scrollTo({ top: 0, behavior: 'smooth' });
         }
 
-        function renderTable() {
+        function () {
     const head = document.getElementById('table-head');
     const body = document.getElementById('table-body');
     const info = document.getElementById('pagination-info');
@@ -773,10 +780,9 @@ function syncData() {
 
 // แยกฟังก์ชัน Search ให้ทำงานเบาลง
 function filterTableSearch() { 
-    currentPage = 1; 
-    renderTable(); 
+    currentPage = 1;  
 }
-        function changePage(p) { currentPage = p; renderTable(); }
+        function changePage(p) { currentPage = p; }
         
         function updateStats() {
             const o = getFilteredData(rawData.orders); const r = getFilteredData(rawData.redo); const f = getFilteredData(rawData.fix);
