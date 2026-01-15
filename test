@@ -305,30 +305,93 @@
         let editingRealIdx = -1;
         let user = null;
         let renderTimeout;
-function syncData() {
-    if (!user) return;
-    const collections = ['orders', 'fix', 'redo', 'problems'];
-    collections.forEach(col => {
-        const q = collection(db, 'artifacts', appId, 'public', 'data', col);
-        onSnapshot(q, (snapshot) => {
-            rawData[col] = snapshot.docs.map(doc => ({ firebaseId: doc.id, data: doc.data().data }))
-                .sort((a,b) => parseDate(b.data[0], b.data[1]) - parseDate(a.data[0], a.data[1]))
-                .map(item => item.data);
-            
-            // ใช้ Debounce เพื่อลดภาระเครื่อง
-            clearTimeout(renderTimeout);
-            renderTimeout = setTimeout(() => {
-                if (currentView === 'overview') refreshOverview();
-                else {
-                    renderTable();
-                    updateStats();
-                }
-            }, 150); 
-        }, (error) => {
-            console.error("Snapshot error:", error);
+
+        // ฟังก์ชัน syncData ที่มีระบบ Debounce เพื่อลดอาการกระตุก 
+        function syncData() {
+            if (!user) return;
+            const collections = ['orders', 'fix', 'redo', 'problems'];
+            collections.forEach(col => {
+                const q = collection(db, 'artifacts', appId, 'public', 'data', col);
+                onSnapshot(q, (snapshot) => {
+                    rawData[col] = snapshot.docs.map(doc => ({ firebaseId: doc.id, data: doc.data().data }))
+                        .sort((a,b) => parseDate(b.data[0], b.data[1]) - parseDate(a.data[0], a.data[1]))
+                        .map(item => item.data);
+                    
+                    // ใช้ Debounce เพื่อป้องกันการวาดหน้าจอซ้ำซ้อนอย่างรวดเร็ว 
+                    clearTimeout(renderTimeout);
+                    renderTimeout = setTimeout(() => {
+                        if (currentView === 'overview') {
+                            refreshOverview();
+                        } else {
+                            renderTable();
+                            updateStats();
+                        }
+                    }, 150); 
+                }, (error) => {
+                    console.error("Snapshot error:", error);
+                });
+            });
+        }
+
+        let selectedRowKeys = new Set();
+        // (ส่วนตัวแปรอื่นๆ คงเดิมไว้...)
+
+        // แก้ไขจุดที่แจ้งเตือน Syntax Error: Identifier 'syncData' has already been declared 
+        // โดยการลบฟังก์ชัน syncData ตัวเก่าที่เคยอยู่ใต้ onAuthStateChanged ออก
+        onAuthStateChanged(auth, (u) => {
+            user = u;
+            if (u) {
+                document.getElementById('user-display').innerText = `ID ผู้ใช้งาน: ${u.uid}`;
+                syncData(); // เรียกใช้ตัวที่ประกาศไว้ด้านบนเพียงที่เดียว 
+            }
         });
-    });
-}
+
+        // แก้ไขฟังก์ชันที่มีการเรียกใช้คำสั่งว่างเปล่า (); ให้เป็น renderTable(); 
+        function setTimeFilter(f, val = null) {
+            currentTimeFilter = f;
+            customDateValue = val;
+            currentPage = 1; 
+            selectedRowKeys.clear(); 
+            updateBulkDeleteUI();
+            document.querySelectorAll('.filter-btn').forEach(b => b.classList.toggle('active', b.id === `filter-${f}`));
+            
+            if (currentView === 'overview') {
+                refreshOverview();
+            } else { 
+                renderTable(); // แก้ไขจากเดิมที่เป็น (); 
+                updateStats(); 
+            }
+            showToast(`เปลี่ยนตัวกรองเรียบร้อยแล้วค่ะ`, 'info');
+        }
+
+        function switchView(v) {
+            currentView = v;
+            currentPage = 1; 
+            editingRealIdx = -1; 
+            selectedRowKeys.clear(); 
+            updateBulkDeleteUI();
+            document.querySelectorAll('nav button').forEach(b => b.classList.toggle('nav-active', b.id === `nav-${v}`));
+            document.getElementById('view-title').innerText = CONFIG[v].title;
+            document.getElementById('view-desc').innerText = CONFIG[v].desc;
+            
+            const mainArea = document.getElementById('main-content-area');
+            mainArea.classList.remove('view-animate'); 
+            void mainArea.offsetWidth; 
+            mainArea.classList.add('view-animate');
+            
+            if (v === 'overview') {
+                document.getElementById('overview-content').classList.remove('hidden');
+                document.getElementById('management-content').classList.add('hidden');
+                refreshOverview();
+            } else {
+                document.getElementById('overview-content').classList.add('hidden');
+                document.getElementById('management-content').classList.remove('hidden');
+                renderForm(v); 
+                renderTable(); // แก้ไขจากเดิมที่เป็น (); 
+                updateStats();
+            }
+            speak(`เปิดหน้า${CONFIG[v].title}`);
+        }
         let selectedRowKeys = new Set(); // Stores JSON strings of row data for uniqueness
 
         let stickyValues = {
