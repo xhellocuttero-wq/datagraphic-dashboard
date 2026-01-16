@@ -280,7 +280,10 @@
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInWithCustomToken, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, doc, setDoc, getDoc, updateDoc, collection, onSnapshot, query, addDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-
+        import { 
+    getFirestore, doc, setDoc, getDoc, updateDoc, collection, onSnapshot, addDoc, deleteDoc, 
+    query, orderBy, limit  // <-- ตรวจสอบว่ามี 3 ตัวนี้เพิ่มเข้าไปแล้ว
+} from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
         const firebaseConfig = {
   apiKey: "AIzaSyA0QWdvnA4ubJ42OAHxnDDJQUHkIFasu3w",
   authDomain: "data-5c343.firebaseapp.com",
@@ -303,12 +306,12 @@ let activeListeners = [];
 
 auth.onAuthStateChanged(u => {
     user = u;
+    const loginScreen = document.getElementById('login-screen');
     if (u) {
-        document.getElementById('login-screen').classList.add('hidden');
+        if (loginScreen) loginScreen.classList.add('hidden'); // เช็คว่ามีตัวตนก่อนสั่ง
         syncData();
     } else {
-        document.getElementById('login-screen').classList.remove('hidden');
-        // หยุดการดึงข้อมูลทันทีเมื่อ Logout เพื่อประหยัดโควตา
+        if (loginScreen) loginScreen.classList.remove('hidden');
         activeListeners.forEach(unsub => unsub());
         activeListeners = [];
     }
@@ -834,6 +837,7 @@ auth.onAuthStateChanged(u => {
 </body>
 
 </html>
+
 
 
 
