@@ -294,8 +294,9 @@
         const auth = getAuth(app);
         const db = getFirestore(app);
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-        let activeListeners = [];
+        
         let rawData = { orders: [], fix: [], redo: [], problems: [] };
+        let activeListeners = [];
         let currentView = 'overview';
         let currentTimeFilter = 'daily'; 
         let customDateValue = null;
@@ -828,4 +829,5 @@
 </body>
 
 </html>
+
 
