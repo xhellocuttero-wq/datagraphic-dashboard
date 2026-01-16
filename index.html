@@ -385,13 +385,13 @@
         function syncData() {
     if (!user) return;
     
-    // 1. ล้าง Listener เก่าทิ้งก่อนทุกครั้ง
+    // หยุดตัวดักฟังเก่าทั้งหมดก่อนเริ่มใหม่
     activeListeners.forEach(unsub => unsub());
     activeListeners = [];
 
     const collections = ['orders', 'fix', 'redo', 'problems'];
     collections.forEach(col => {
-        // 2. ใช้ Query + Limit เพื่อประหยัด Quota
+        // จำกัดการดึงข้อมูลเฉพาะ 300 รายการล่าสุด
         const q = query(
             collection(db, 'artifacts', appId, 'public', 'data', col),
             orderBy("timestamp", "desc"),
@@ -399,13 +399,16 @@
         );
 
         const unsubscribe = onSnapshot(q, (snapshot) => {
-            // 3. เก็บ fbId ไว้ในตัวข้อมูลเลย เพื่อใช้ Update/Delete ได้ทันที
             rawData[col] = snapshot.docs.map(doc => {
-                let item = doc.data().data;
-                return { 
-                    fbId: doc.id, // เก็บ ID ไว้ที่นี่
-                    data: item 
-                };
+                let d = doc.data().data;
+                d._fbId = doc.id; // ฝัง Firebase ID ลงในข้อมูลเพื่อใช้แก้ไข/ลบ
+                return d;
+            });
+            // ... โค้ดการ Render เดิมของคุณ ...
+        });
+        activeListeners.push(unsubscribe);
+    });
+}
             }).map(item => {
                 let d = item.data;
                 d._fbId = item.fbId; // ฝัง ID ลงใน array ข้อมูล
@@ -616,16 +619,18 @@
         }
 
         async function deleteRow(v, globalIdx) {
-            if (!user) return;
-            if(!confirm("ลบรายการนี้?")) return;
-            const allSortedData = [...getFilteredData(rawData[v])].sort((a,b) => parseDate(b[0],b[1]) - parseDate(a[0],a[1]));
-            const target = allSortedData[globalIdx];
-            const q = collection(db, 'artifacts', appId, 'public', 'data', v);
-            onSnapshot(q, async (snapshot) => {
-                const targetDoc = snapshot.docs.find(d => JSON.stringify(d.data().data) === JSON.stringify(target));
-                if (targetDoc) await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', v, targetDoc.id));
-            }, (e) => {}, { once: true });
-        }
+    if (!user || !confirm("ลบรายการนี้?")) return;
+    
+    // ดึงข้อมูลจากตำแหน่งที่เลือกในตาราง
+    const allSortedData = [...getFilteredData(rawData[v])].sort((a,b) => parseDate(b[0],b[1]) - parseDate(a[0],a[1]));
+    const target = allSortedData[globalIdx];
+    
+    // ใช้ _fbId ที่เราฝังไว้ ลบได้ทันที ไม่ต้องเปิด onSnapshot ซ้ำ
+    if (target._fbId) {
+        await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', v, target._fbId));
+        showToast("ลบข้อมูลสำเร็จ");
+    }
+}
 
         function toggleRowSelection(rowJson) {
             if (selectedRowKeys.has(rowJson)) selectedRowKeys.delete(rowJson);
@@ -823,3 +828,4 @@
 </body>
 
 </html>
+
