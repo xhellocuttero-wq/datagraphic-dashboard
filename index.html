@@ -294,7 +294,7 @@
         const auth = getAuth(app);
         const db = getFirestore(app);
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-
+        let activeListeners = [];
         let rawData = { orders: [], fix: [], redo: [], problems: [] };
         let currentView = 'overview';
         let currentTimeFilter = 'daily'; 
@@ -383,25 +383,45 @@
         });
 
         function syncData() {
-            if (!user) return;
-            const collections = ['orders', 'fix', 'redo', 'problems'];
-            collections.forEach(col => {
-                const q = collection(db, 'artifacts', appId, 'public', 'data', col);
-                onSnapshot(q, (snapshot) => {
-                    rawData[col] = snapshot.docs.map(doc => ({ firebaseId: doc.id, data: doc.data().data }))
-                        .sort((a,b) => parseDate(b.data[0], b.data[1]) - parseDate(a.data[0], a.data[1]))
-                        .map(item => item.data);
-                    
-                    if (currentView === 'overview') refreshOverview(); 
-                    else if (currentView === col || currentView !== 'overview') {
-                        renderTable();
-                        updateStats();
-                    }
-                }, (error) => {
-                    console.error("Snapshot error:", error);
-                });
+    if (!user) return;
+    
+    // 1. ล้าง Listener เก่าทิ้งก่อนทุกครั้ง
+    activeListeners.forEach(unsub => unsub());
+    activeListeners = [];
+
+    const collections = ['orders', 'fix', 'redo', 'problems'];
+    collections.forEach(col => {
+        // 2. ใช้ Query + Limit เพื่อประหยัด Quota
+        const q = query(
+            collection(db, 'artifacts', appId, 'public', 'data', col),
+            orderBy("timestamp", "desc"),
+            limit(300) 
+        );
+
+        const unsubscribe = onSnapshot(q, (snapshot) => {
+            // 3. เก็บ fbId ไว้ในตัวข้อมูลเลย เพื่อใช้ Update/Delete ได้ทันที
+            rawData[col] = snapshot.docs.map(doc => {
+                let item = doc.data().data;
+                return { 
+                    fbId: doc.id, // เก็บ ID ไว้ที่นี่
+                    data: item 
+                };
+            }).map(item => {
+                let d = item.data;
+                d._fbId = item.fbId; // ฝัง ID ลงใน array ข้อมูล
+                return d;
             });
-        }
+            
+            if (currentView === 'overview') refreshOverview(); 
+            else {
+                renderTable();
+                updateStats();
+            }
+        });
+        
+        activeListeners.push(unsubscribe);
+    });
+}
 
         window.switchView = switchView;
         window.setTimeFilter = setTimeFilter;
@@ -801,4 +821,5 @@
         window.onload = async () => { await initAuth(); switchView('overview'); };
     </script>
 </body>
+
 </html>
