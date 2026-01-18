@@ -7,7 +7,6 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Sarabun:wght@300;400;500;600&display=swap" rel="stylesheet">
-    <!-- Firebase Libraries -->
     <script src="https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js" type="module"></script>
     <script src="https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js" type="module"></script>
     <script src="https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js" type="module"></script>
@@ -68,14 +67,11 @@
             transition: all 0.2s;
         }
         .input-clean:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(251, 146, 60, 0.1); }
-        
         th { font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-sub); padding: 14px 24px; border-bottom: 2px solid #fff7ed; }
         td { padding: 12px 24px; font-size: 14px; border-bottom: 1px solid #fdfcfb; }
         tr:hover { background: #fffbf7; }
-
         ::-webkit-scrollbar { width: 6px; }
         ::-webkit-scrollbar-thumb { background: #fed7aa; border-radius: 10px; }
-
         @keyframes slideIn {
             from { transform: translateX(100%); opacity: 0; }
             to { transform: translateX(0); opacity: 1; }
@@ -83,7 +79,6 @@
         .toast {
             animation: slideIn 0.3s ease-out forwards;
         }
-
         @keyframes viewEntrance {
             0% { transform: translateX(30px); opacity: 0; }
             100% { transform: translateX(0); opacity: 1; }
@@ -91,7 +86,6 @@
         .view-animate {
             animation: viewEntrance 0.4s cubic-bezier(0.25, 1, 0.5, 1) forwards;
         }
-
         .datepicker-wrapper {
             position: relative;
             display: flex;
@@ -121,11 +115,7 @@
     </style>
 </head>
 <body class="flex h-screen overflow-hidden">
-
-    <!-- Toast Notification Container -->
     <div id="toast-container" class="fixed top-6 right-6 z-[200] flex flex-col gap-3"></div>
-
-    <!-- Sidebar -->
     <aside class="w-64 h-full bg-white border-r border-orange-50 flex flex-col p-6 z-50">
         <div class="mb-10 flex items-center gap-3">
             <div class="w-10 h-10 bg-gradient-to-br from-orange-400 to-orange-500 rounded-xl flex items-center justify-center shadow-lg shadow-orange-100 animate-pulse">
@@ -136,7 +126,6 @@
                 <p class="text-[10px] text-orange-300 font-bold uppercase tracking-widest">WARROOM</p>
             </div>
         </div>
-
         <nav class="space-y-1.5 flex-1">
             <button onclick="switchView('overview')" id="nav-overview" class="w-full flex items-center gap-4 px-4 py-3 rounded-xl transition-all nav-active">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"></path></svg>
@@ -159,44 +148,32 @@
                 <span class="text-sm">บันทึกปัญหา</span>
             </button>
         </nav>
-
         <div class="mt-auto space-y-3">
             <div id="user-display" class="text-[10px] text-slate-400 font-bold mb-2 break-all px-2">กำลังยืนยันตัวตน...</div>
             <button onclick="document.getElementById('fileInput').click()" class="w-full py-3 rounded-xl bg-orange-500 text-white text-xs font-bold hover:bg-orange-600 transition-all shadow-lg shadow-orange-100">อัปโหลดไฟล์ (CSV)</button>
             <button onclick="exportAllData()" class="w-full py-3 rounded-xl border border-orange-100 text-orange-400 text-xs font-bold hover:bg-orange-50 transition-all">ดาวน์โหลด Report</button>
         </div>
     </aside>
-
-    <!-- Main Content -->
-    <main id="main-content-area" class="flex-1 flex flex-col p-8 overflow-y-auto">
-        
-        <!-- Top Bar -->
+    <main id="main-content-area" class="flex-1 flex flex-col p-8 overflow-y-auto">        
         <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-8">
             <div>
                 <h2 id="view-title" class="text-2xl font-extrabold text-slate-800 tracking-tight">สรุปผลการทำงาน</h2>
                 <p id="view-desc" class="text-sm text-slate-400 font-medium">ภาพรวมข้อมูลการผลิตและประสิทธิภาพรายแผนก</p>
-            </div>
-            
+            </div>           
             <div class="flex flex-wrap items-center p-1.5 bg-white rounded-2xl soft-shadow border border-orange-50 gap-1">
                 <button onclick="setTimeFilter('daily')" id="filter-daily" class="filter-btn active">วันนี้</button>
                 <button onclick="setTimeFilter('monthly')" id="filter-monthly" class="filter-btn">เดือนนี้</button>
                 <button onclick="setTimeFilter('all')" id="filter-all" class="filter-btn">ทั้งหมด</button>
                 <div class="h-6 w-[1px] bg-orange-100 mx-1"></div>
-                <!-- Date Picker -->
                 <div class="datepicker-wrapper" title="เลือกวันที่">
                     <input type="date" id="custom-date-filter" onchange="setTimeFilter('custom', this.value)">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
                 </div>
             </div>
         </div>
-
-        <!-- Metric Widgets -->
         <div id="stats-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-8"></div>
-
-        <!-- Dashboard Content -->
         <div id="overview-content" class="grid grid-cols-1 gap-8">
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                <!-- Production Pulse Chart -->
                 <div class="card p-8 soft-shadow bg-white relative overflow-hidden">
                     <div class="absolute top-0 right-0 w-32 h-32 bg-orange-50 rounded-full -mr-16 -mt-16 opacity-40"></div>
                     <div class="flex justify-between items-center mb-6 relative z-10">
@@ -205,8 +182,6 @@
                     </div>
                     <div class="h-[250px] relative z-10"><canvas id="ovOrderChart"></canvas></div>
                 </div>
-
-                <!-- Fix & Redo Mixed Chart -->
                 <div class="card p-8 soft-shadow bg-white relative overflow-hidden">
                     <div class="flex justify-between items-center mb-6">
                         <h3 class="text-[10px] font-black text-rose-400 uppercase tracking-widest">กราฟงานเสียรายชั่วโมง</h3>
@@ -214,7 +189,6 @@
                     <div class="h-[250px]"><canvas id="ovFixRedoChart"></canvas></div>
                 </div>
             </div>
-
             <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
                 <div class="card p-8 soft-shadow bg-white lg:col-span-1 flex flex-col items-center justify-center">
                     <h3 class="text-[10px] font-black text-indigo-400 uppercase tracking-widest mb-6 w-full text-left">สัดส่วนประเภทงานแก้</h3>
@@ -222,7 +196,6 @@
                         <canvas id="ovFixTypePieChart"></canvas>
                     </div>
                 </div>
-
                 <div class="card overflow-hidden soft-shadow lg:col-span-2">
                     <div class="px-8 py-5 border-b border-orange-50 flex justify-between items-center bg-orange-50/20">
                         <h3 class="text-[10px] font-black text-slate-400 uppercase tracking-widest">รายการที่ยังไม่เสร็จ (ล่าสุด)</h3>
@@ -234,13 +207,10 @@
                 </div>
             </div>
         </div>
-
-        <!-- Management View -->
         <div id="management-content" class="hidden space-y-8">
             <div id="form-container" class="card p-8 soft-shadow bg-white border-orange-100 border-dashed border-2">
                 <form id="main-form" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7 gap-4 items-end" onsubmit="handleFormSubmit(event)"></form>
             </div>
-
             <div class="card overflow-hidden soft-shadow">
                 <div class="px-8 py-5 flex flex-col md:flex-row justify-between items-center gap-4 bg-white border-b border-orange-50">
                     <div class="flex items-center gap-4 w-full max-w-lg">
@@ -264,10 +234,7 @@
             </div>
         </div>
     </main>
-
     <input type="file" id="fileInput" class="hidden" multiple onchange="handleFiles(event)">
-
-    <!-- Alert Modal -->
     <div id="alert-modal" class="hidden fixed inset-0 bg-black/50 z-[100] flex items-center justify-center p-4 backdrop-blur-sm">
         <div class="bg-white rounded-2xl p-6 max-w-sm w-full soft-shadow text-center scale-95 animate-in zoom-in duration-200">
             <h4 id="alert-title" class="text-lg font-bold text-slate-800 mb-2">แจ้งเตือนจากระบบ</h4>
@@ -275,60 +242,43 @@
             <button onclick="document.getElementById('alert-modal').classList.add('hidden')" class="w-full py-3 bg-orange-500 text-white font-bold rounded-xl shadow-lg shadow-orange-100 hover:scale-[1.02] active:scale-[0.98] transition-transform">ตกลง เข้าใจแล้ว</button>
         </div>
     </div>
-
     <script type="module">
-        // --- ส่วนที่แก้ไขให้ถูกต้อง (บรรทัด 301-310) ---
-import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-import { getAuth, signInWithCustomToken, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-import { getFirestore, doc, setDoc, getDoc, updateDoc, collection, onSnapshot, addDoc, deleteDoc, query, orderBy, limit } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-// ------------------------------------------
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInWithCustomToken, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, setDoc, getDoc, updateDoc, collection, onSnapshot, query, addDoc, deleteDoc, where, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        
         const firebaseConfig = {
-  apiKey: "AIzaSyA0QWdvnA4ubJ42OAHxnDDJQUHkIFasu3w",
-  authDomain: "data-5c343.firebaseapp.com",
-  projectId: "data-5c343",
-  storageBucket: "data-5c343.firebasestorage.app",
-  messagingSenderId: "555799172632",
-  appId: "1:555799172632:web:ced0d5f789362a9228156d",
-  measurementId: "G-S132TKE0NB"
-};
+            apiKey: "AIzaSyA0QWdvnA4ubJ42OAHxnDDJQUHkIFasu3w",
+            authDomain: "data-5c343.firebaseapp.com",
+            projectId: "data-5c343",
+            storageBucket: "data-5c343.firebasestorage.app",
+            messagingSenderId: "555799172632",
+            appId: "1:555799172632:web:ced0d5f789362a9228156d",
+            measurementId: "G-S132TKE0NB"
+        };
+        
+        let renderTimer;
+        const dateCache = new Map();
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
         const db = getFirestore(app);
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-        
-        let user = null;
-let currentView = 'overview';
-let rawData = { orders: [], fix: [], redo: [], problems: [] };
-// เพิ่มบรรทัดนี้เพื่อเก็บสถานะการดึงข้อมูล
-let activeListeners = []; 
-
-auth.onAuthStateChanged(u => {
-    user = u;
-    const loginScreen = document.getElementById('login-screen');
-    if (u) {
-        if (loginScreen) loginScreen.classList.add('hidden'); // เช็คว่ามีตัวตนก่อนสั่ง
-        syncData();
-    } else {
-        if (loginScreen) loginScreen.classList.remove('hidden');
-        activeListeners.forEach(unsub => unsub());
-        activeListeners = [];
-    }
-});
+        let rawData = { orders: [], fix: [], redo: [], problems: [] };
+        let currentView = 'overview';
         let currentTimeFilter = 'daily'; 
         let customDateValue = null;
         let currentPage = 1;
         const itemsPerPage = 60;
         let charts = {};
         let editingRealIdx = -1;
-        let selectedRowKeys = new Set(); // Stores JSON strings of row data for uniqueness
-
+        let user = null;
+        let selectedRowKeys = new Set();
         let stickyValues = {
             orders: { dept: 'งานเรียง', color: 'สีแดง' },
             fix: { type: 'ผิดลาย' },
             redo: {},
             problems: { issue: 'ปัญหากันคน' }
         };
-
         const CONFIG = {
             overview: { title: "สรุปผลการทำงาน", desc: "ภาพรวมข้อมูลการผลิตและประสิทธิภาพรายแผนก" },
             orders: { 
@@ -375,9 +325,8 @@ auth.onAuthStateChanged(u => {
                 ]
             }
         };
-
         const themeColors = { orange: '#fb923c', blue: '#38bdf8', indigo: '#818cf8', amber: '#fbbf24', rose: '#fb7185', teal: '#2dd4bf', slate: '#94a3b8' };
-
+        
         async function initAuth() {
             try {
                 if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
@@ -389,66 +338,69 @@ auth.onAuthStateChanged(u => {
                 await signInAnonymously(auth);
             }
         }
-
+        
         onAuthStateChanged(auth, (u) => {
             user = u;
             if (u) {
-                document.getElementById('user-display').innerText = `ID ผู้ใช้งาน: ${u.uid}`;
+                document.getElementById('user-display').innerText = `ID ผู้ใช้งาน: ${u.uid.substring(0,6)}...`;
                 syncData();
             }
         });
 
+        // --- Core Data Sync (Auto Refresh) ---
         function syncData() {
-    if (!user) return;
+            if (!user) return;
+            const collections = ['orders', 'fix', 'redo', 'problems'];
+            collections.forEach(col => {
+                const qCol = collection(db, 'artifacts', appId, 'public', 'data', col);
+                onSnapshot(qCol, (snapshot) => {
+                    const newData = snapshot.docs.map(doc => ({
+                        firebaseId: doc.id,
+                        data: doc.data().data
+                    })).sort((a, b) => parseDate(b.data[0]) - parseDate(a.data[0]))
+                      .map(item => item.data);
 
-    // หยุดการเชื่อมต่อเดิมทั้งหมดก่อนเริ่มใหม่ เพื่อป้องกัน Listener ซ้อนกัน
-    activeListeners.forEach(unsub => unsub());
-    activeListeners = [];
-
-    const collections = ['orders', 'fix', 'redo', 'problems'];
-    collections.forEach(col => {
-        // จำกัดการดึงข้อมูลเฉพาะ 300 รายการล่าสุด และเรียงตามเวลา
-        const q = query(
-            collection(db, 'artifacts', appId, 'public', 'data', col),
-            orderBy("timestamp", "desc"),
-            limit(300)
-        );
-
-        const unsubscribe = onSnapshot(q, (snapshot) => {
-            rawData[col] = snapshot.docs.map(doc => {
-                let itemData = doc.data().data;
-                // สำคัญ: เก็บ Firebase ID ไว้ในตัวข้อมูลเพื่อใช้แก้ไข/ลบ โดยไม่ต้อง Query ซ้ำ
-                itemData._fbId = doc.id; 
-                return itemData;
+                    if (JSON.stringify(rawData[col]) !== JSON.stringify(newData)) {
+                        rawData[col] = newData;
+                        clearTimeout(renderTimer);
+                        renderTimer = setTimeout(() => {
+                            if (currentView === col || currentView === 'overview') {
+                                currentView === 'overview' ? refreshOverview() : renderTable();
+                                updateStats();
+                            }
+                        }, 200);
+                    }
+                });
             });
-            
-            if (currentView === 'overview') refreshOverview(); 
-            else {
-                renderTable();
-                updateStats();
+        }
+
+        async function handleFormSubmit(e) {
+            e.preventDefault();
+            if (!user) return;
+            const btn = e.target.querySelector('button[type="submit"]');
+            const originalText = btn.innerHTML;
+            btn.disabled = true;
+            btn.innerHTML = 'กำลังบันทึก...';
+            try {
+                const inputs = Array.from(e.target.querySelectorAll('input[type="text"], input[type="number"], select'));
+                const formData = inputs.map(input => input.value.trim());
+                if (formData.some(v => v === "")) throw new Error("กรุณากรอกข้อมูลให้ครบ");
+                
+                formData.push("รอดำเนินการ");
+
+                await addDoc(collection(db, 'artifacts', appId, 'public', 'data', currentView), {
+                    data: formData,
+                    timestamp: new Date()
+                });
+                showToast("บันทึกสำเร็จ");
+                e.target.reset();
+            } catch (err) {
+                showAlert("ผิดพลาด", err.message);
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = originalText;
             }
-        });
-        
-        // บันทึกตัวหยุดการเชื่อมต่อไว้ใน Array
-        activeListeners.push(unsubscribe);
-    });
-}
-        window.switchView = switchView;
-        window.setTimeFilter = setTimeFilter;
-        window.handleFormSubmit = handleFormSubmit;
-        window.toggleStatus = toggleStatus;
-        window.directToggleStatus = directToggleStatus;
-        window.deleteRow = deleteRow;
-        window.editRow = editRow;
-        window.cancelEdit = cancelEdit;
-        window.changePage = changePage;
-        window.filterTableSearch = filterTableSearch;
-        window.handleFiles = handleFiles;
-        window.exportAllData = exportAllData;
-        window.showAlert = showAlert;
-        window.toggleRowSelection = toggleRowSelection;
-        window.toggleAllSelection = toggleAllSelection;
-        window.deleteSelectedRows = deleteSelectedRows;
+        }
 
         function showToast(msg, type = 'success') {
             const container = document.getElementById('toast-container');
@@ -459,38 +411,30 @@ auth.onAuthStateChanged(u => {
             container.appendChild(toast);
             setTimeout(() => { toast.style.opacity = '0'; toast.style.transform = 'translateX(20px)'; setTimeout(() => toast.remove(), 300); }, 3000);
         }
-
         function speak(text) { if ('speechSynthesis' in window) { const msg = new SpeechSynthesisUtterance(text); msg.lang = 'th-TH'; msg.rate = 1.1; window.speechSynthesis.speak(msg); } }
-        function showAlert(title, msg) { document.getElementById('alert-title').innerText = title; document.getElementById('alert-msg').innerText = msg; document.getElementById('alert-modal').classList.remove('hidden'); speak(msg); }
+        function showAlert(title, msg) { document.getElementById('alert-title').innerText = title; document.getElementById('alert-msg').innerText = msg; document.getElementById('alert-modal').classList.remove('hidden'); speak(msg); }      
         
-        function parseDate(d, t) { 
-            if (!d) return new Date(0); 
-            if (d.includes(',')) {
-                let dtStr = d.replace(/"/g, '');
-                const parts = dtStr.split(',');
-                if (parts.length >= 2) {
-                    const dParts = parts[0].trim().split('/');
-                    if (dParts.length === 3) {
-                        let year = parseInt(dParts[2]);
-                        if (year > 2500) year -= 543;
-                        return new Date(`${year}-${dParts[1].padStart(2,'0')}-${dParts[0].padStart(2,'0')}T${parts[1].trim()}`);
-                    }
-                }
-                return new Date(dtStr);
+        function parseDate(dateStr) {
+            if (!dateStr) return new Date(0);
+            if (dateCache.has(dateStr)) return dateCache.get(dateStr);
+            const [dPart, tPart] = dateStr.split(' ');
+            const p = dPart.split('/');
+            let y = parseInt(p[2]);
+            if (y > 2500) y -= 543;
+            const d = new Date(y, p[1]-1, p[0]);
+            if (tPart) {
+                const t = tPart.split(':');
+                d.setHours(t[0]||0, t[1]||0);
             }
-            const p = d.split('/');
-            const tp = (t || "00:00:00").split(':'); 
-            if (p.length < 3) return new Date(0); 
-            let year = parseInt(p[2]);
-            if (year > 2500) year -= 543; 
-            return new Date(year, p[1]-1, p[0], tp[0], tp[1], tp[2]); 
+            dateCache.set(dateStr, d);
+            return d;
         }
 
         function getFilteredData(arr) {
             if (currentTimeFilter === 'all') return arr;
             const now = new Date();
             return arr.filter(r => {
-                const rd = parseDate(r[0], r[1]);
+                const rd = parseDate(r[0]);
                 if (currentTimeFilter === 'daily') return rd.toDateString() === now.toDateString();
                 if (currentTimeFilter === 'monthly') return rd.getMonth() === now.getMonth() && rd.getFullYear() === now.getFullYear();
                 if (currentTimeFilter === 'custom' && customDateValue) {
@@ -535,14 +479,12 @@ auth.onAuthStateChanged(u => {
             const today = now.toISOString().split('T')[0];
             const nowTime = now.toTimeString().split(' ')[0].substring(0, 5);
             const isEditing = editingRealIdx > -1;
-            container.className = isEditing ? "card p-8 soft-shadow bg-sky-50/30 border-sky-200 border-2" : "card p-8 soft-shadow bg-white border-orange-100 border-dashed border-2";
-            
+            container.className = isEditing ? "card p-8 soft-shadow bg-sky-50/30 border-sky-200 border-2" : "card p-8 soft-shadow bg-white border-orange-100 border-dashed border-2";           
             form.innerHTML = CONFIG[v].fields.map(f => {
                 let defaultValue = stickyValues[v][f.name] || '';
                 if (f.name === 'date' && !defaultValue) defaultValue = today;
                 if (f.name === 'time' && !defaultValue) defaultValue = nowTime;
                 if (f.name === 'datetime' && !defaultValue) defaultValue = now.toISOString().slice(0,16);
-
                 if (f.type === 'select') {
                     return `
                     <div class="flex flex-col gap-2">
@@ -552,7 +494,6 @@ auth.onAuthStateChanged(u => {
                         </select>
                     </div>`;
                 }
-
                 return `
                 <div class="flex flex-col gap-2">
                     <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest">${f.label}</label>
@@ -569,93 +510,60 @@ auth.onAuthStateChanged(u => {
 
         function cancelEdit() { editingRealIdx = -1; renderForm(currentView); }
 
-        async function handleFormSubmit(e) {
-            e.preventDefault();
-            if (!user) return;
-            const fd = new FormData(e.target);
-            const dataObj = Object.fromEntries(fd.entries());
-            
-            Object.keys(dataObj).forEach(k => stickyValues[currentView][k] = dataObj[k]);
-
-            let entry = [];
-            if (currentView === 'fix') {
-                const dt = new Date(dataObj.datetime);
-                const dtStr = `"${dt.getDate()}/${dt.getMonth()+1}/${dt.getFullYear()}, ${dt.getHours()}:${dt.getMinutes().toString().padStart(2,'0')}:${dt.getSeconds().toString().padStart(2,'0')}"`;
-                entry = [dtStr, dataObj.photo_no, dataObj.type, dataObj.sku, dataObj.orderid];
-            } else {
-                const dateParts = dataObj.date.split('-');
-                const dateStr = `${dateParts[2]}/${dateParts[1]}/${dateParts[0]}`;
-                let timeStr = dataObj.time; if (timeStr.split(':').length === 2) timeStr += ":00";
-                entry = [dateStr, timeStr];
-                CONFIG[currentView].fields.forEach(f => { if(f.name!=='date'&&f.name!=='time') entry.push(dataObj[f.name]); });
-            }
-            
-            try {
-                if (editingRealIdx > -1) {
-                    const sorted = [...getFilteredData(rawData[currentView])].sort((a,b) => parseDate(b[0],b[1]) - parseDate(a[0],a[1]));
-                    const target = sorted[editingRealIdx];
-                    entry.push(target[target.length - 1]); // keep status
-                    const q = collection(db, 'artifacts', appId, 'public', 'data', currentView);
-                    onSnapshot(q, async (snapshot) => {
-                        const targetDoc = snapshot.docs.find(d => JSON.stringify(d.data().data) === JSON.stringify(target));
-                        if (targetDoc) await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', currentView, targetDoc.id), { data: entry });
-                    }, (e)=>{}, {once: true});
-                    editingRealIdx = -1;
-                    showToast("อัปเดตสำเร็จ");
-                } else {
-                    entry.push('กำลังทำ');
-                    await addDoc(collection(db, 'artifacts', appId, 'public', 'data', currentView), { data: entry, timestamp: new Date() });
-                    showToast("บันทึกสำเร็จ");
-                }
-                renderForm(currentView);
-            } catch (err) { showToast("เกิดข้อผิดพลาด", "error"); }
-        }
-
+        // --- Optimized Toggle Status (Table) ---
         async function toggleStatus(view, globalIdx) {
             if (!user) return;
-            const allInView = [...getFilteredData(rawData[view])].sort((a,b) => parseDate(b[0],b[1]) - parseDate(a[0],a[1]));
-            const targetRow = allInView[globalIdx];
-            if (!targetRow) return;
-            let nextStatus = (targetRow[targetRow.length - 1] === 'เสร็จแล้ว' || targetRow[targetRow.length - 1] === 'TRUE') ? 'กำลังทำ' : 'เสร็จแล้ว';
-            const updatedRow = [...targetRow]; updatedRow[updatedRow.length - 1] = nextStatus;
-            const q = collection(db, 'artifacts', appId, 'public', 'data', view);
-            onSnapshot(q, async (snapshot) => {
-                const targetDoc = snapshot.docs.find(d => JSON.stringify(d.data().data) === JSON.stringify(targetRow));
-                if (targetDoc) await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', view, targetDoc.id), { data: updatedRow });
-            }, (e) => {}, { once: true });
+            const sorted = [...getFilteredData(rawData[view])].sort((a,b) => parseDate(b[0]) - parseDate(a[0]));
+            const row = sorted[globalIdx];
+            if (!row) return;
+
+            const oldRowData = [...row];
+            const statusIdx = row.length - 1;
+            const currentStatus = row[statusIdx];
+            const nextStatus = (currentStatus === 'เสร็จแล้ว' || currentStatus === 'TRUE') ? 'กำลังทำ' : 'เสร็จแล้ว';
+
+            // Optimistic Update
+            row[statusIdx] = nextStatus;
+            renderTable();
+            updateStats();
+
+            try {
+                const qSearch = query(collection(db, 'artifacts', appId, 'public', 'data', view),
+                                      where("data", "==", oldRowData));
+                const snap = await getDocs(qSearch);
+                if (!snap.empty) {
+                    const docRef = doc(db, 'artifacts', appId, 'public', 'data', view, snap.docs[0].id);
+                    await updateDoc(docRef, { data: row });
+                }
+            } catch(e) { console.error(e); }
         }
 
         async function deleteRow(v, globalIdx) {
-    if (!user || !confirm("ลบรายการนี้?")) return;
-    
-    // ดึงข้อมูลจากตำแหน่งที่เลือกในตาราง
-    const allSortedData = [...getFilteredData(rawData[v])].sort((a,b) => parseDate(b[0],b[1]) - parseDate(a[0],a[1]));
-    const target = allSortedData[globalIdx];
-    
-    // ใช้ _fbId ที่เราฝังไว้ ลบได้ทันที ไม่ต้องเปิด onSnapshot ซ้ำ
-    if (target._fbId) {
-        await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', v, target._fbId));
-        showToast("ลบข้อมูลสำเร็จ");
-    }
-}
+            if (!user) return;
+            if(!confirm("ลบรายการนี้?")) return;
+            const allSortedData = [...getFilteredData(rawData[v])].sort((a,b) => parseDate(b[0],b[1]) - parseDate(a[0],a[1]));
+            const target = allSortedData[globalIdx];
+            const qDel = collection(db, 'artifacts', appId, 'public', 'data', v);
+            onSnapshot(qDel, async (snapshot) => {
+                const targetDoc = snapshot.docs.find(d => JSON.stringify(d.data().data) === JSON.stringify(target));
+                if (targetDoc) await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', v, targetDoc.id));
+            }, (e) => {}, { once: true });
+        }
 
-        function toggleRowSelection(rowJson) {
-            if (selectedRowKeys.has(rowJson)) selectedRowKeys.delete(rowJson);
-            else selectedRowKeys.add(rowJson);
+        function toggleRowSelection(escapedJson) {
+            const rowJson = escapedJson.replace(/&quot;/g, '"');
+            if (selectedRowKeys.has(rowJson)) { selectedRowKeys.delete(rowJson); } else { selectedRowKeys.add(rowJson); }
             updateBulkDeleteUI();
             renderTable();
         }
 
         function toggleAllSelection(isChecked) {
             const allInView = [...getFilteredData(rawData[currentView])].sort((a,b) => parseDate(b[0],b[1]) - parseDate(a[0],a[1]));
-            const totalItems = allInView.length;
             const start = (currentPage - 1) * itemsPerPage;
             const displayData = allInView.slice(start, start + itemsPerPage);
-            
             displayData.forEach(row => {
                 const key = JSON.stringify(row);
-                if (isChecked) selectedRowKeys.add(key);
-                else selectedRowKeys.delete(key);
+                if (isChecked) selectedRowKeys.add(key); else selectedRowKeys.delete(key);
             });
             updateBulkDeleteUI();
             renderTable();
@@ -664,21 +572,14 @@ auth.onAuthStateChanged(u => {
         function updateBulkDeleteUI() {
             const btn = document.getElementById('bulk-delete-btn');
             const count = selectedRowKeys.size;
-            if (count > 0) {
-                btn.innerText = `ลบที่เลือก (${count})`;
-                btn.classList.remove('hidden');
-            } else {
-                btn.classList.add('hidden');
-            }
+            if (count > 0) { btn.innerText = `ลบที่เลือก (${count})`; btn.classList.remove('hidden'); } else { btn.classList.add('hidden'); }
         }
 
         async function deleteSelectedRows() {
             if (!user || selectedRowKeys.size === 0) return;
-            if (!confirm(`ยืนยันการลบทั้งหมด ${selectedRowKeys.size} รายการ?`)) return;
-            
+            if (!confirm(`ยืนยันการลบทั้งหมด ${selectedRowKeys.size} รายการ?`)) return;         
             const keysToDelete = Array.from(selectedRowKeys);
-            const q = collection(db, 'artifacts', appId, 'public', 'data', currentView);
-            
+            const q = collection(db, 'artifacts', appId, 'public', 'data', currentView);         
             onSnapshot(q, async (snapshot) => {
                 let deletedCount = 0;
                 for (const rowJson of keysToDelete) {
@@ -720,6 +621,7 @@ auth.onAuthStateChanged(u => {
         }
 
         function renderTable() {
+            if (currentView === 'overview') return; 
             const head = document.getElementById('table-head');
             const body = document.getElementById('table-body');
             const info = document.getElementById('pagination-info');
@@ -729,10 +631,7 @@ auth.onAuthStateChanged(u => {
             const totalPages = Math.ceil(totalItems / itemsPerPage) || 1;
             const start = (currentPage - 1) * itemsPerPage;
             const displayData = allSortedData.slice(start, start + itemsPerPage);
-            
-            // Sync Check-All Checkbox
             const allSelectedInPage = displayData.length > 0 && displayData.every(row => selectedRowKeys.has(JSON.stringify(row)));
-
             info.innerText = `หน้า ${currentPage} จาก ${totalPages}`;
             head.innerHTML = `<th class="w-12"><input type="checkbox" class="check-all-box" onchange="toggleAllSelection(this.checked)" ${allSelectedInPage?'checked':''}></th>` + CONFIG[currentView].cols.map(c => `<th>${c}</th>`).join('') + `<th class="text-right">จัดการ</th>`;
             body.innerHTML = displayData.map((row, localIdx) => {
@@ -740,12 +639,17 @@ auth.onAuthStateChanged(u => {
                 const rowJson = JSON.stringify(row);
                 const isSelected = selectedRowKeys.has(rowJson);
                 const statusVal = row[row.length - 1];
-                let statusClass = "px-3 py-1 rounded-full text-[10px] font-bold transition-all " + (statusVal === 'เสร็จแล้ว' || statusVal === 'TRUE' ? "bg-emerald-50 text-emerald-500" : "bg-orange-50 text-orange-500");
-                let cellsHtml = `<td><input type="checkbox" class="check-all-box" onchange='toggleRowSelection(${JSON.stringify(rowJson)})' ${isSelected?'checked':''}></td>`;
+                const escapedRowJson = JSON.stringify(rowJson).replace(/"/g, '&quot;');
+                let statusClass = "px-3 py-1 rounded-full text-[10px] font-bold transition-all " + 
+                    (statusVal === 'เสร็จแล้ว' || statusVal === 'TRUE' ? "bg-emerald-50 text-emerald-500" : "bg-orange-50 text-orange-500");
+                let cellsHtml = `<td><input type="checkbox" class="check-all-box" onchange="toggleRowSelection('${escapedRowJson}')" ${isSelected?'checked':''}></td>`;
                 row.forEach((cell, cIdx) => {
-                    const cleanCell = (cell || '-').toString().replace(/"/g, '');
-                    if (cIdx === row.length - 1) cellsHtml += `<td><button onclick="toggleStatus('${currentView}', ${globalIdx})" class="${statusClass}">${statusVal === 'TRUE' ? 'เสร็จแล้ว' : cleanCell}</button></td>`;
-                    else cellsHtml += `<td>${cleanCell}</td>`;
+                    const cleanCell = (cell || '-').toString().replace(/"/g, '');       
+                    if (cIdx === row.length - 1) {
+                        cellsHtml += `<td><button onclick="toggleStatus('${currentView}', ${globalIdx})" class="${statusClass}">${statusVal === 'TRUE' ? 'เสร็จแล้ว' : cleanCell}</button></td>`;
+                    } else {
+                        cellsHtml += `<td>${cleanCell}</td>`;
+                    }
                 });
                 return `<tr class="group animate-in fade-in duration-300 ${isSelected?'bg-orange-50/30':''}">
                     ${cellsHtml}
@@ -757,7 +661,6 @@ auth.onAuthStateChanged(u => {
                     </td>
                 </tr>`;
             }).join('') || '<tr><td colspan="20" class="text-center py-24 italic text-slate-300">ไม่มีข้อมูล</td></tr>';
-            
             let pBtns = ''; if (totalPages > 1) {
                 pBtns += `<button onclick="changePage(${currentPage-1})" class="${currentPage===1?'opacity-30 pointer-events-none':''} px-3 py-1 rounded-lg border border-orange-100 text-orange-400 text-[10px] font-bold">ก่อนหน้า</button>`;
                 for (let i = 1; i <= totalPages; i++) pBtns += `<button onclick="changePage(${i})" class="w-8 h-8 rounded-lg border text-[10px] font-bold ${i===currentPage?'bg-orange-500 text-white':'text-slate-400'}">${i}</button>`;
@@ -797,13 +700,33 @@ auth.onAuthStateChanged(u => {
             document.getElementById('ovRecentList').innerHTML = allPending.map(i => `<div class="px-8 py-4 flex justify-between items-center bg-white hover:bg-orange-50/20"><div><span class="text-[9px] font-black ${i.c} uppercase">${i.t} #${i.id}</span><p class="text-[10px] text-slate-300 font-bold">${i.d.toString().replace(/"/g,'')}</p></div><button onclick="directToggleStatus('${i.view}', '${i.id}')" class="px-3 py-1 bg-orange-50 text-orange-500 text-[9px] font-black rounded-lg">กำลังทำ</button></div>`).join('') || '<div class="py-16 text-center text-slate-200">ไม่มีงานค้าง</div>';
         }
 
-        function directToggleStatus(view, id) {
-            const row = rawData[view].find(r => r[2] == id || r[3] == id || r[4] == id);
-            if(row) toggleStatus(view, [...getFilteredData(rawData[view])].sort((a,b) => parseDate(b[0],b[1]) - parseDate(a[0],a[1])).indexOf(row));
+        // --- Optimized Toggle Status (Overview) ---
+        async function directToggleStatus(view, id) {
+            if (!user) return;
+            const row = rawData[view].find(r => r.some(cell => cell === id));
+            if (!row) return;
+
+            const oldRowData = [...row];
+            const statusIdx = row.length - 1;
+            const currentStatus = row[statusIdx];
+            const nextStatus = (currentStatus === 'เสร็จแล้ว' || currentStatus === 'TRUE') ? 'กำลังทำ' : 'เสร็จแล้ว';
+
+            row[statusIdx] = nextStatus;
+            if (currentView === 'overview') refreshOverview();
+
+            try {
+                const qSearch = query(collection(db, 'artifacts', appId, 'public', 'data', view), 
+                                     where("data", "==", oldRowData));
+                const snapSearch = await getDocs(qSearch);
+                if (!snapSearch.empty) {
+                    const docRef = doc(db, 'artifacts', appId, 'public', 'data', view, snapSearch.docs[0].id);
+                    await updateDoc(docRef, { data: row });
+                }
+            } catch (err) { console.error("Sync error:", err); }
         }
 
         function filterTableSearch() { const q = document.getElementById('search').value.toLowerCase(); document.querySelectorAll('#table-body tr').forEach(r => r.style.display = r.innerText.toLowerCase().includes(q) ? '' : 'none'); }
-
+        
         async function handleFiles(e) {
             if (!user) return;
             const files = Array.from(e.target.files);
@@ -811,12 +734,20 @@ auth.onAuthStateChanged(u => {
                 const reader = new FileReader();
                 reader.onload = async (ev) => {
                     const lines = ev.target.result.split('\n').filter(l => l.trim());
+                    if (lines.length <= 1) return;
                     const header = lines[0].toLowerCase();
-                    const data = lines.slice(1).map(l => l.split(',').map(c => c.trim().replace(/^"|"$/g, '')));
+                    const rawRows = lines.slice(1).map(l => l.split(',').map(c => c.trim().replace(/^"|"$/g, '')));
                     let targetCol = header.includes('แผนก') ? "orders" : header.includes('sku') ? "fix" : header.includes('ครั้งที่') ? "redo" : "";
+                    
                     if (targetCol) {
-                        for (const row of data) if(row.length>0) await addDoc(collection(db, 'artifacts', appId, 'public', 'data', targetCol), { data: row, timestamp: new Date() });
-                        showToast("อัปโหลดสำเร็จ");
+                        for (const row of rawRows) {
+                            if(row.length > 1) {
+                                let finalRow = [...row];
+                                if (targetCol === "fix" && row.length >= 2) finalRow = [`${row[0]} ${row[1]}`, ...row.slice(2)];
+                                await addDoc(collection(db, 'artifacts', appId, 'public', 'data', targetCol), { data: finalRow, timestamp: new Date() });
+                            }
+                        }
+                        showToast(`นำเข้า ${targetCol} สำเร็จ`);
                     }
                 };
                 reader.readAsText(file);
@@ -824,20 +755,38 @@ auth.onAuthStateChanged(u => {
         }
 
         function exportAllData() {
-            let csv = "\ufeffType,Date,Time,V1,V2,V3,V4,V5,Status\n";
-            Object.keys(rawData).forEach(k => rawData[k].forEach(r => csv += `${k.toUpperCase()},${r.join(',')}\n`));
+            let csv = "\ufeffType,Data\n";
+            Object.keys(rawData).forEach(k => {
+                rawData[k].forEach(r => csv += `${k.toUpperCase()},${r.join(',')}\n`);
+            });
             const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-            const link = document.createElement("a"); link.href = URL.createObjectURL(blob); link.download = `Report_Production.csv`; link.click();
+            const link = document.createElement("a");
+            link.href = URL.createObjectURL(blob);
+            link.download = "Report_All.csv";
+            link.click();
         }
 
-        window.onload = async () => { await initAuth(); switchView('overview'); };
+        window.onload = async () => { 
+            await initAuth(); 
+            syncData(); 
+            switchView('overview'); 
+        };
+        window.setTimeFilter = setTimeFilter;
+        window.switchView = switchView;
+        window.handleFormSubmit = handleFormSubmit;
+        window.toggleStatus = toggleStatus;
+        window.directToggleStatus = directToggleStatus;
+        window.syncData = syncData;
+        window.deleteRow = deleteRow;
+        window.editRow = editRow;
+        window.cancelEdit = cancelEdit;
+        window.changePage = changePage;
+        window.filterTableSearch = filterTableSearch;
+        window.handleFiles = handleFiles;
+        window.exportAllData = exportAllData;
+        window.toggleRowSelection = toggleRowSelection;
+        window.toggleAllSelection = toggleAllSelection;
+        window.deleteSelectedRows = deleteSelectedRows;
     </script>
 </body>
-
 </html>
-
-
-
-
-
-
