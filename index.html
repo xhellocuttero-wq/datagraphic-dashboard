@@ -246,10 +246,13 @@
             try {
                 const inputs = Array.from(e.target.querySelectorAll('input, select')).filter(i => i.name);
                 const formData = inputs.map(input => {
-                    // --- เพิ่มการบันทึกค่าลงใน stickyValues เพื่อให้คงตัวเลือกไว้ล่าสุด ---
                     stickyValues[currentView][input.name] = input.value; 
-
-                    if (input.type === 'date' && input.value) { const [y, m, d] = input.value.split('-'); return `${d}/${m}/${parseInt(y) + 543}`; }
+                    if ((input.type === 'date' || input.type === 'datetime-local') && input.value) {
+                        const [datePart, timePart] = input.value.split('T');
+                        const [y, m, d] = datePart.split('-');
+                        const bYear = parseInt(y) + 543;
+                        return timePart ? `${d}/${m}/${bYear} ${timePart}` : `${d}/${m}/${bYear}`;
+                    }
                     return input.value.trim();
                 });
                 if (formData.some(v => v === "")) throw new Error("กรุณากรอกข้อมูลให้ครบ");
@@ -263,7 +266,6 @@
                     await addDoc(collection(db, 'artifacts', appId, 'public', 'data', currentView), { data: formData, timestamp: serverTimestamp() });
                 }
                 showToast("บันทึกสำเร็จ"); 
-                // --- ลบ e.target.reset() ออก เพื่อให้ค่าค้างไว้ และสั่ง renderForm ใหม่ ---
                 renderForm(currentView); 
             } catch (err) { showAlert("ผิดพลาด", err.message); } finally { btn.disabled = false; btn.innerHTML = originalText; }
         }
@@ -282,15 +284,17 @@
         
         function parseDate(dateStr) {
             if (!dateStr) return new Date(0);
-            if (dateCache.has(dateStr)) return dateCache.get(dateStr);
-            const str = dateStr.toString().replace(/"/g, '');
-            const [dPart, tPart] = str.split(' ');
+            const str = dateStr.toString().replace(/"/g, '').trim();
+            if (dateCache.has(str)) return dateCache.get(str);
+            const parts = str.split(' ');
+            const dPart = parts[0];
+            const tPart = parts[1] || "00:00";
             const p = dPart.split('/');
-            if(p.length < 3) return new Date(0);
-            let y = parseInt(p[2]); if (y > 2500) y -= 543;
-            const d = new Date(y, p[1]-1, p[0]);
-            if (tPart) { const t = tPart.split(':'); d.setHours(t[0]||0, t[1]||0); }
-            dateCache.set(dateStr, d); return d;
+            if (p.length < 3) return new Date(0);
+            let y = parseInt(p[2]); if (y > 2400) y -= 543;
+            const [h, min] = tPart.split(':');
+            const d = new Date(y, parseInt(p[1]) - 1, parseInt(p[0]), parseInt(h) || 0, parseInt(min) || 0);
+            dateCache.set(str, d); return d;
         }
 
         function getFilteredData(arr) {
@@ -339,7 +343,6 @@
             const isEditing = editingRealIdx > -1;
             container.className = isEditing ? "card p-8 soft-shadow bg-sky-50/30 border-sky-200 border-2" : "card p-8 soft-shadow bg-white border-orange-100 border-dashed border-2";           
             form.innerHTML = CONFIG[v].fields.map(f => {
-                // --- ปรับให้ดึงค่าจาก stickyValues มาใช้ก่อนเสมอเพื่อให้คงค่าล่าสุด ---
                 let defaultValue = stickyValues[v][f.name];
                 
                 if (!defaultValue) {
