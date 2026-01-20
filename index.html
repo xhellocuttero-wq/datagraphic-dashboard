@@ -223,7 +223,7 @@
             if (!user) return;
             const collections = ['orders', 'fix', 'redo', 'problems'];
             collections.forEach(col => {
-                const qCol = query(collection(db, 'artifacts', appId, 'public', 'data', col), orderBy('timestamp', 'desc'));
+                const qCol = query(collection(db, 'artifacts', appId, 'public', 'data', col), orderBy('timestamp', 'desc'),limit(500));
                 onSnapshot(qCol, (snapshot) => {
                     const newData = snapshot.docs.map(doc => ({ firebaseId: doc.id, data: doc.data().data }));
                     if (JSON.stringify(rawData[col]) !== JSON.stringify(newData)) {
