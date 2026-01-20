@@ -223,7 +223,7 @@
             if (!user) return;
             const collections = ['orders', 'fix', 'redo', 'problems'];
             collections.forEach(col => {
-                const qCol = query(collection(db, 'artifacts', appId, 'public', 'data', col), orderBy('timestamp', 'desc'), limit(500));
+                const qCol = query(collection(db, 'artifacts', appId, 'public', 'data', col), orderBy('timestamp', 'desc'));
                 onSnapshot(qCol, (snapshot) => {
                     const newData = snapshot.docs.map(doc => ({ firebaseId: doc.id, data: doc.data().data }));
                     if (JSON.stringify(rawData[col]) !== JSON.stringify(newData)) {
@@ -494,7 +494,9 @@
         function changePage(p) { currentPage = p; renderTable(); document.querySelector('main').scrollTo({ top: 400, behavior: 'smooth' }); }
         
         function updateStats() {
-            const o = getFilteredData(rawData.orders); const r = getFilteredData(rawData.redo); const f = getFilteredData(rawData.fix);
+            const o = getFilteredData(rawData.orders)(currentTimeFilter === 'all'); 
+            const r = getFilteredData(rawData.redo)(currentTimeFilter === 'all'); 
+            const f = getFilteredData(rawData.fix)(currentTimeFilter === 'all');
             const total = o.reduce((s, x) => s + (parseInt(x.data[3]) || 0), 0);
             const totalRedo = r.reduce((s, x) => s + (parseInt(x.data[3]) || 0), 0);
             const pending = f.filter(x => x.data[x.data.length-1] !== 'เสร็จแล้ว' && x.data[x.data.length-1] !== 'TRUE').length;
