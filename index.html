@@ -252,9 +252,9 @@
 
             // Logic: If 'All', use getDocs (One-time fetch to save reads). 
             // If Daily/Monthly, use onSnapshot (Real-time).
-            const isAllMode = currentTimeFilter === 'all';
+            const isStaticMode = currentTimeFilter === 'all' || currentTimeFilter === 'monthly';
             
-            if (isAllMode) {
+            if (isStaticMode) {
                 statusIndicator.innerText = "Offline/Static";
                 statusIndicator.className = "status-badge status-static";
                 statusIndicator.classList.remove('hidden');
@@ -267,14 +267,14 @@
             collections.forEach(col => {
                 let constraints = [orderBy('timestamp', 'desc')];
                 
-                if (!isAllMode && start && end) {
+                if (!isStaticMode && start && end) {
                     constraints.push(where('timestamp', '>=', start));
                     constraints.push(where('timestamp', '<=', end));
                 }
 
                 const qCol = query(collection(db, 'artifacts', appId, 'public', 'data', col), ...constraints);
 
-                if (isAllMode) {
+                if (isStaticMode) {
                     // ONE-TIME FETCH for 'All' to save costs and prevent loops
                     getDocs(qCol).then((snapshot) => {
                         const newData = snapshot.docs.map(doc => ({ firebaseId: doc.id, data: doc.data().data }));
@@ -684,3 +684,4 @@
     </script>
 </body>
 </html>
+
