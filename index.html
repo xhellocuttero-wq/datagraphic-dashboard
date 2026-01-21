@@ -37,6 +37,10 @@
         .datepicker-wrapper input[type="date"] { position: absolute; opacity: 0; width: 100%; height: 100%; cursor: pointer; z-index: 2; }
         .datepicker-wrapper svg { position: relative; z-index: 1; color: #fb923c; }
         .check-all-box { width: 16px; height: 16px; accent-color: #fb923c; cursor: pointer; }
+        /* Badge for Realtime/Static Status */
+        .status-badge { font-size: 9px; padding: 2px 6px; border-radius: 4px; margin-left: 8px; font-weight: bold; }
+        .status-live { background-color: #dcfce7; color: #166534; }
+        .status-static { background-color: #f1f5f9; color: #64748b; }
     </style>
 </head>
 <body class="flex h-screen overflow-hidden">
@@ -84,7 +88,10 @@
         <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-8">
             <div>
                 <h2 id="view-title" class="text-2xl font-extrabold text-slate-800 tracking-tight">สรุปผลการทำงาน</h2>
-                <p id="view-desc" class="text-sm text-slate-400 font-medium">ภาพรวมข้อมูลการผลิตและประสิทธิภาพรายแผนก</p>
+                <div class="flex items-center gap-2">
+                    <p id="view-desc" class="text-sm text-slate-400 font-medium">ภาพรวมข้อมูลการผลิตและประสิทธิภาพรายแผนก</p>
+                    <span id="data-status-indicator" class="status-badge status-live hidden">Real-time</span>
+                </div>
             </div>           
             <div class="flex flex-wrap items-center p-1.5 bg-white rounded-2xl soft-shadow border border-orange-50 gap-1">
                 <button onclick="setTimeFilter('daily')" id="filter-daily" class="filter-btn active">วันนี้</button>
@@ -177,7 +184,7 @@
     <script type="module">
         import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
         import { getAuth, signInWithCustomToken, signInAnonymously, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js';
-        import { getFirestore, collection, doc, addDoc, setDoc, updateDoc, deleteDoc, query, onSnapshot, serverTimestamp, getDocs, where, orderBy, limit } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js';        
+        import { getFirestore, collection, doc, addDoc, setDoc, updateDoc, deleteDoc, query, onSnapshot, serverTimestamp, getDocs, where, orderBy, limit, enableIndexedDbPersistence } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js';        
         
         const firebaseConfig = {
             apiKey: "AIzaSyA0QWdvnA4ubJ42OAHxnDDJQUHkIFasu3w",
@@ -196,9 +203,16 @@
         const db = getFirestore(app);
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
         
-        // rawData holds data ONLY for the current time filter to save memory and reads
+        // --- Persistence for cost saving (re-fetch without server cost) ---
+        try {
+            enableIndexedDbPersistence(db).catch((err) => {
+                if (err.code == 'failed-precondition') console.log('Persistence failed: Multiple tabs open');
+                else if (err.code == 'unimplemented') console.log('Persistence not supported');
+            });
+        } catch(e) { console.log("Persistence init error", e); }
+
         let rawData = { orders: [], fix: [], redo: [], problems: [] };
-        let activeListeners = []; // Store unsubscribe functions
+        let activeListeners = []; 
         
         let currentView = 'overview';
         let currentTimeFilter = 'daily'; 
@@ -223,47 +237,78 @@
         async function initAuth() { try { if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) { await signInWithCustomToken(auth, __initial_auth_token); } else { await signInAnonymously(auth); } } catch (error) { await signInAnonymously(auth); } }
         onAuthStateChanged(auth, (u) => { user = u; if (u) { document.getElementById('user-display').innerText = `ID ผู้ใช้งาน: ${u.uid.substring(0,6)}...`; syncData(); } });
 
-        // --- UPGRADED SYNC DATA FUNCTION (Low Reads Strategy) ---
+        // --- UPDATED HYBRID SYNC (Economy + Realtime) ---
         function syncData() {
             if (!user) return;
-            // Unsubscribe previous listeners to stop reading old data streams
+            
+            // Cleanup old listeners
             activeListeners.forEach(unsub => unsub());
             activeListeners = [];
-            rawData = { orders: [], fix: [], redo: [], problems: [] }; // Clear current data view
-            
+            rawData = { orders: [], fix: [], redo: [], problems: [] }; 
+
             const collections = ['orders', 'fix', 'redo', 'problems'];
             const { start, end } = getDateRange();
+            const statusIndicator = document.getElementById('data-status-indicator');
+
+            // Logic: If 'All', use getDocs (One-time fetch to save reads). 
+            // If Daily/Monthly, use onSnapshot (Real-time).
+            const isAllMode = currentTimeFilter === 'all';
+            
+            if (isAllMode) {
+                statusIndicator.innerText = "Offline/Static";
+                statusIndicator.className = "status-badge status-static";
+                statusIndicator.classList.remove('hidden');
+            } else {
+                statusIndicator.innerText = "Real-time";
+                statusIndicator.className = "status-badge status-live";
+                statusIndicator.classList.remove('hidden');
+            }
 
             collections.forEach(col => {
                 let constraints = [orderBy('timestamp', 'desc')];
                 
-                // CRITICAL FIX: Only apply filter if NOT 'all'. 
-                // If 'all', we fetch everything (User requested graphs from ALL data).
-                // If 'daily'/'monthly', we use strict server-side filtering to save reads.
-                if (currentTimeFilter !== 'all' && start && end) {
+                if (!isAllMode && start && end) {
                     constraints.push(where('timestamp', '>=', start));
                     constraints.push(where('timestamp', '<=', end));
                 }
 
                 const qCol = query(collection(db, 'artifacts', appId, 'public', 'data', col), ...constraints);
 
-                const unsub = onSnapshot(qCol, (snapshot) => {
-                    const newData = snapshot.docs.map(doc => ({ firebaseId: doc.id, data: doc.data().data }));
-                    rawData[col] = newData; // Replaces data with the filtered set
-                    
-                    clearTimeout(renderTimer);
-                    renderTimer = setTimeout(() => {
-                        if (currentView === col || currentView === 'overview') {
-                            currentView === 'overview' ? refreshOverview() : renderTable();
-                            updateStats();
-                        }
-                    }, 150);
-                }, (error) => {
-                    console.error("Data sync error:", error);
-                    showToast("โหลดข้อมูลไม่สำเร็จ (อาจต้องสร้าง Index)", "error");
-                });
-                activeListeners.push(unsub);
+                if (isAllMode) {
+                    // ONE-TIME FETCH for 'All' to save costs and prevent loops
+                    getDocs(qCol).then((snapshot) => {
+                        const newData = snapshot.docs.map(doc => ({ firebaseId: doc.id, data: doc.data().data }));
+                        rawData[col] = newData;
+                        triggerRender();
+                    }).catch(err => {
+                        console.error("Fetch error:", err);
+                        showToast("โหลดข้อมูลล้มเหลว", "error");
+                    });
+                } else {
+                    // REAL-TIME for Daily/Monthly
+                    const unsub = onSnapshot(qCol, (snapshot) => {
+                        // Metadata.fromCache check if needed, but persistence handles it silently
+                        const newData = snapshot.docs.map(doc => ({ firebaseId: doc.id, data: doc.data().data }));
+                        rawData[col] = newData;
+                        triggerRender();
+                    }, (error) => {
+                        console.error("Sync error:", error);
+                    });
+                    activeListeners.push(unsub);
+                }
             });
+        }
+
+        function triggerRender() {
+            clearTimeout(renderTimer);
+            renderTimer = setTimeout(() => {
+                if (currentView === 'overview') {
+                    refreshOverview();
+                } else {
+                    renderTable();
+                    updateStats();
+                }
+            }, 150);
         }
 
         function getDateRange() {
@@ -280,7 +325,7 @@
                 start = new Date(parts[0], parts[1]-1, parts[2]);
                 end = new Date(parts[0], parts[1]-1, parts[2], 23, 59, 59, 999);
             } else {
-                return { start: null, end: null }; // For 'all'
+                return { start: null, end: null }; 
             }
             return { start, end };
         }
@@ -301,22 +346,30 @@
                         return timePart ? `${d}/${m}/${bYear} ${timePart}` : `${d}/${m}/${bYear}`;
                     }
                     if (input.type === 'time' && input.value) {
-                        return input.value; // Keeps 24h format from input value
+                        return input.value; 
                     }
                     return input.value.trim();
                 });
                 if (formData.some(v => v === "")) throw new Error("กรุณากรอกข้อมูลให้ครบ");
                 formData.push("รอดำเนินการ");
                 if (editingRealIdx > -1) {
-                    // Note: When editing, we need the ID. The index might reference the loaded array.
-                    // Because we are using client-side pagination on the filtered set, editingRealIdx refers to rawData[currentView] index.
                     const rowObj = rawData[currentView][editingRealIdx];
                     if(rowObj) {
-                        await updateDoc(doc(doc(db, 'artifacts', appId, 'public', 'data', currentView, rowObj.firebaseId)), { data: formData, timestamp: serverTimestamp() });
+                        await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', currentView, rowObj.firebaseId), { data: formData, timestamp: serverTimestamp() });
+                        // If in 'all' mode (static), manually update local data to reflect change immediately
+                        if (currentTimeFilter === 'all') {
+                             rowObj.data = formData;
+                             triggerRender();
+                        }
                     }
                     editingRealIdx = -1;
                 } else {
-                    await addDoc(collection(db, 'artifacts', appId, 'public', 'data', currentView), { data: formData, timestamp: serverTimestamp() });
+                    const docRef = await addDoc(collection(db, 'artifacts', appId, 'public', 'data', currentView), { data: formData, timestamp: serverTimestamp() });
+                    // If in 'all' mode (static), manually append to local data
+                    if (currentTimeFilter === 'all') {
+                        rawData[currentView].unshift({ firebaseId: docRef.id, data: formData });
+                        triggerRender();
+                    }
                 }
                 showToast("บันทึกสำเร็จ"); 
                 renderForm(currentView); 
@@ -350,23 +403,12 @@
             dateCache.set(str, d); return d;
         }
 
-        // We don't need detailed client-side filtering anymore since server does it,
-        // but we keep this for search bar and robustness.
-        function getFilteredData(arr) {
-            // Server side has already done the heavy lifting for date.
-            // But if we are in 'all' mode, we might want to ensure consistency.
-            return arr; 
-        }
-
         function setTimeFilter(f, val = null) {
             currentTimeFilter = f; customDateValue = val;
             currentPage = 1; selectedRowKeys.clear(); updateBulkDeleteUI();
             document.querySelectorAll('.filter-btn').forEach(b => b.classList.toggle('active', b.id === `filter-${f}`));
-            
-            // Re-sync data with new constraints (This is the key fix)
             syncData();
-            
-            showToast(`เปลี่ยนช่วงเวลา: ${f === 'all' ? 'ข้อมูลทั้งหมด' : 'กรองข้อมูลแล้ว'}`, 'info');
+            showToast(`เปลี่ยนช่วงเวลา: ${f === 'all' ? 'ข้อมูลทั้งหมด (Offline Mode)' : 'Real-time Mode'}`, 'info');
         }
 
         function switchView(v) {
@@ -391,7 +433,6 @@
             const form = document.getElementById('main-form');
             const container = document.getElementById('form-container');
             const now = new Date(); const today = now.toISOString().split('T')[0];
-            // Format time as HH:mm specifically
             const h = now.getHours().toString().padStart(2, '0');
             const m = now.getMinutes().toString().padStart(2, '0');
             const nowTime = `${h}:${m}`;
@@ -424,20 +465,27 @@
 
         async function toggleStatus(view, globalIdx) {
             if (!user) return;
-            // globalIdx matches rawData index because pagination is client-side slice of rawData
             const rowObj = rawData[view][globalIdx];
             if (!rowObj) return;
             const newData = [...rowObj.data];
             const statusIdx = newData.length - 1;
             newData[statusIdx] = (newData[statusIdx] === 'เสร็จแล้ว' || newData[statusIdx] === 'TRUE') ? 'กำลังทำ' : 'เสร็จแล้ว';
-            try { await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', view, rowObj.firebaseId), { data: newData }); showToast("อัปเดตสถานะแล้ว"); } catch(e) { console.error(e); }
+            try { 
+                await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', view, rowObj.firebaseId), { data: newData }); 
+                if (currentTimeFilter === 'all') { rowObj.data = newData; triggerRender(); }
+                showToast("อัปเดตสถานะแล้ว"); 
+            } catch(e) { console.error(e); }
         }
 
         async function deleteRow(v, globalIdx) {
             if (!user) return;
             const rowObj = rawData[v][globalIdx];
             if(!rowObj || !confirm("ลบรายการนี้?")) return;
-            try { await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', v, rowObj.firebaseId)); showToast("ลบข้อมูลแล้ว"); } catch(e) { console.error(e); }
+            try { 
+                await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', v, rowObj.firebaseId)); 
+                if (currentTimeFilter === 'all') { rawData[v].splice(globalIdx, 1); triggerRender(); }
+                showToast("ลบข้อมูลแล้ว"); 
+            } catch(e) { console.error(e); }
         }
 
         function toggleRowSelection(escapedJson) {
@@ -467,8 +515,12 @@
             const keysToDelete = Array.from(selectedRowKeys);
             for (const rowJson of keysToDelete) {
                 const targetObj = allInView.find(o => JSON.stringify(o.data) === rowJson);
-                if (targetObj) { await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', currentView, targetObj.firebaseId)); }
+                if (targetObj) { 
+                    await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', currentView, targetObj.firebaseId)); 
+                    if (currentTimeFilter === 'all') { const idx = rawData[currentView].indexOf(targetObj); if(idx>-1) rawData[currentView].splice(idx,1); }
+                }
             }
+            if (currentTimeFilter === 'all') triggerRender();
             selectedRowKeys.clear(); updateBulkDeleteUI(); showToast(`ลบสำเร็จแล้ว`);
         }
 
@@ -485,7 +537,6 @@
             } else {
                 let dateParts = target[0].split('/'); let yr = parseInt(dateParts[2]); if (yr > 2500) yr -= 543;
                 document.getElementById('field-date').value = `${yr}-${dateParts[1].padStart(2, '0')}-${dateParts[0].padStart(2, '0')}`;
-                // Keep the time value as is from data for 24h consistency
                 document.getElementById('field-time').value = target[1];
                 CONFIG[v].fields.forEach((f, fIdx) => { if(f.name!=='date'&&f.name!=='time') document.getElementById(`field-${f.name}`).value = target[fIdx+2] || ''; });
             }
@@ -499,16 +550,12 @@
             const info = document.getElementById('pagination-info');
             const controls = document.getElementById('pagination-controls');
             
-            // rawData contains EVERYTHING fetched from server (which is already filtered by date)
             const allInView = rawData[currentView];
             
             const totalItems = allInView.length;
             const totalPages = Math.ceil(totalItems / itemsPerPage) || 1;
             if (currentPage > totalPages) currentPage = totalPages;
 
-            // Client-side pagination logic remains effective because 
-            // 1. If 'daily', array is small -> fast.
-            // 2. If 'all', array is large -> but we slice it here so DOM is light (50 items only).
             const start = (currentPage - 1) * itemsPerPage;
             const displayData = allInView.slice(start, start + itemsPerPage);
             const allSelectedInPage = displayData.length > 0 && displayData.every(rowObj => selectedRowKeys.has(JSON.stringify(rowObj.data)));
@@ -553,9 +600,6 @@
         function changePage(p) { currentPage = p; renderTable(); document.querySelector('main').scrollTo({ top: 400, behavior: 'smooth' }); }
         
         function updateStats() {
-            // Stats are calculated from whatever is in rawData.
-            // If filter is 'daily', stats are for today.
-            // If filter is 'all', stats are for all time (and match the graphs).
             const o = rawData.orders; 
             const r = rawData.redo; 
             const f = rawData.fix;
@@ -590,7 +634,14 @@
             const newData = [...currentData];
             const statusIdx = newData.length - 1;
             newData[statusIdx] = (newData[statusIdx] === 'เสร็จแล้ว' || newData[statusIdx] === 'TRUE') ? 'กำลังทำ' : 'เสร็จแล้ว';
-            try { await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', view, fbId), { data: newData }); showToast("อัปเดตสถานะแล้ว"); } catch (err) { console.error("Sync error:", err); }
+            try { 
+                await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', view, fbId), { data: newData }); 
+                if (currentTimeFilter === 'all') { // Manually update UI for static mode
+                    const target = rawData[view].find(x => x.firebaseId === fbId);
+                    if (target) { target.data = newData; triggerRender(); }
+                }
+                showToast("อัปเดตสถานะแล้ว"); 
+            } catch (err) { console.error("Sync error:", err); }
         }
 
         function filterTableSearch() { const q = document.getElementById('search').value.toLowerCase(); document.querySelectorAll('#table-body tr').forEach(r => r.style.display = r.innerText.toLowerCase().includes(q) ? '' : 'none'); }
@@ -632,6 +683,4 @@
         window.setTimeFilter = setTimeFilter; window.switchView = switchView; window.handleFormSubmit = handleFormSubmit; window.toggleStatus = toggleStatus; window.directToggleStatus = directToggleStatus; window.syncData = syncData; window.deleteRow = deleteRow; window.editRow = editRow; window.cancelEdit = cancelEdit; window.changePage = changePage; window.filterTableSearch = filterTableSearch; window.handleFiles = handleFiles; window.exportAllData = exportAllData; window.toggleRowSelection = toggleRowSelection; window.toggleAllSelection = toggleAllSelection; window.deleteSelectedRows = deleteSelectedRows;
     </script>
 </body>
-
 </html>
-
