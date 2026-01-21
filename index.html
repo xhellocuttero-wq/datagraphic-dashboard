@@ -4,12 +4,14 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>DATA GRAPHIC | WARROOM Edition (Cloud)</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="icon" href="https://cdn-icons-png.flaticon.com/512/1055/1055644.png" type="image/x-icon">
+    
+    <link href="./dist/output.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Sarabun:wght@300;400;500;600&display=swap" rel="stylesheet">
-    <script src="https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js" type="module"></script>
-    <script src="https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js" type="module"></script>
-    <script src="https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js" type="module"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js" type="module"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js" type="module"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js" type="module"></script>
     <style>
         :root { --primary: #fb923c; --secondary: #38bdf8; --bg-main: #fdfcfb; --card-bg: #ffffff; --text-main: #334155; --text-sub: #94a3b8; }
         body { font-family: 'Inter', 'Sarabun', sans-serif; background-color: var(--bg-main); color: var(--text-main); transition: all 0.3s ease; }
@@ -17,28 +19,8 @@
         .card { background: var(--card-bg); border: 1px solid #f8fafc; border-radius: 1.25rem; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
         .card:hover { transform: translateY(-2px); box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.05); }
         .nav-active { color: var(--primary); background: #fff7ed; font-weight: 600; box-shadow: inset 4px 0 0 var(--primary); }
-        .filter-btn { 
-    font-size: 11px; 
-    font-weight: 600; 
-    padding: 6px 14px; 
-    border-radius: 10px; 
-    color: var(--text-sub); 
-    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); /* เพิ่มความสมูท */
-}
-        .filter-btn:hover {
-    transform: translateY(-2px); /* ลอยขึ้น 2 พิกเซล */
-    background-color: #fff7ed;   /* เปลี่ยนพื้นหลังจางๆ */
-    color: var(--primary);       /* เปลี่ยนสีตัวอักษรเป็นสีส้ม */
-}
-        .filter-btn.active { 
-    color: white; 
-    background: var(--primary); 
-    box-shadow: 0 4px 12px rgba(251, 146, 60, 0.3); 
-    transform: translateY(-2px); /* ให้ลอยค้างไว้เมื่อเลือก */
-}
-        .filter-btn:active {
-    transform: translateY(0);    /* กดลงไปที่เดิมเมื่อคลิก */
-}
+        .filter-btn { font-size: 11px; font-weight: 600; padding: 6px 14px; border-radius: 10px; color: var(--text-sub); transition: all 0.2s; }
+        .filter-btn.active { color: white; background: var(--primary); box-shadow: 0 4px 12px rgba(251, 146, 60, 0.3); }
         .input-clean { background: #ffffff; border: 1px solid #e2e8f0; border-radius: 10px; padding: 8px 12px; font-size: 14px; outline: none; transition: all 0.2s; }
         .input-clean:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(251, 146, 60, 0.1); }
         th { font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-sub); padding: 14px 24px; border-bottom: 2px solid #fff7ed; }
@@ -193,9 +175,9 @@
     </div>
 
     <script type="module">
-        import { initializeApp } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js';
-        import { getAuth, signInWithCustomToken, signInAnonymously, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js';
-        import { getFirestore, collection, doc, addDoc, setDoc, updateDoc, deleteDoc, query, onSnapshot, serverTimestamp, getDocs, where, orderBy, limit } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js';        
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
+        import { getAuth, signInWithCustomToken, signInAnonymously, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js';
+        import { getFirestore, collection, doc, addDoc, setDoc, updateDoc, deleteDoc, query, onSnapshot, serverTimestamp, getDocs, where, orderBy, limit, startAfter, getCountFromServer } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js';        
         
         const firebaseConfig = {
             apiKey: "AIzaSyA0QWdvnA4ubJ42OAHxnDDJQUHkIFasu3w",
@@ -207,18 +189,24 @@
             measurementId: "G-S132TKE0NB"
         };
         
-        let renderTimer;
-        const dateCache = new Map();
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
         const db = getFirestore(app);
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+        
+        // --- DATA STATE ---
         let rawData = { orders: [], fix: [], redo: [], problems: [] };
+        let activeListeners = [];
         let currentView = 'overview';
         let currentTimeFilter = 'daily'; 
         let customDateValue = null;
+        
+        // --- SERVER-SIDE PAGINATION STATE ---
         let currentPage = 1;
         const itemsPerPage = 50; 
+        let pageSnapshots = { orders: [null], fix: [null], redo: [null], problems: [null] };
+        let totalCounts = { orders: 0, fix: 0, redo: 0, problems: 0 };
+        
         let charts = {};
         let editingRealIdx = -1;
         let user = null;
@@ -235,27 +223,118 @@
         const themeColors = { orange: '#fb923c', blue: '#38bdf8', indigo: '#818cf8', amber: '#fbbf24', rose: '#fb7185', teal: '#2dd4bf', slate: '#94a3b8' };
 
         async function initAuth() { try { if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) { await signInWithCustomToken(auth, __initial_auth_token); } else { await signInAnonymously(auth); } } catch (error) { await signInAnonymously(auth); } }
-        onAuthStateChanged(auth, (u) => { user = u; if (u) { document.getElementById('user-display').innerText = `ID ผู้ใช้งาน: ${u.uid.substring(0,6)}...`; syncData(); } });
+        
+        onAuthStateChanged(auth, (u) => { 
+            user = u; 
+            if (u) { 
+                document.getElementById('user-display').innerText = `ID ผู้ใช้งาน: ${u.uid.substring(0,6)}...`; 
+                syncData(); 
+            } 
+        });
 
-        function syncData() {
+        // --- UPGRADED SYNC DATA (Server-side Pagination & Aggregation) ---
+        async function syncData() {
             if (!user) return;
-            const collections = ['orders', 'fix', 'redo', 'problems'];
-            collections.forEach(col => {
-                const qCol = query(collection(db, 'artifacts', appId, 'public', 'data', col), orderBy('timestamp', 'desc'), limit(500));
-                onSnapshot(qCol, (snapshot) => {
-                    const newData = snapshot.docs.map(doc => ({ firebaseId: doc.id, data: doc.data().data }));
-                    if (JSON.stringify(rawData[col]) !== JSON.stringify(newData)) {
-                        rawData[col] = newData;
-                        clearTimeout(renderTimer);
-                        renderTimer = setTimeout(() => {
-                            if (currentView === col || currentView === 'overview') {
-                                currentView === 'overview' ? refreshOverview() : renderTable();
-                                updateStats();
-                            }
-                        }, 150);
+            activeListeners.forEach(unsub => unsub());
+            activeListeners = [];
+            
+            // 1. ดึงสถิติโดยใช้ Aggregation Query (ประหยัด Reads มาก)
+            updateStatsWithAggregation();
+
+            // 2. ดึงข้อมูลตารางแบบมี Limit (Server-side Pagination)
+            fetchTableData();
+
+            // 3. ดึงข้อมูลสำหรับกราฟ (เรายังต้องใช้ snapshot เพื่อความเรียลไทม์ในหน้า Overview)
+            // แต่จะจำกัดขอบเขตวันที่อย่างเคร่งครัด
+            if (currentView === 'overview') {
+                const collections = ['orders', 'fix', 'redo', 'problems'];
+                const { start, end } = getDateRange();
+                collections.forEach(col => {
+                    let qConstraints = [orderBy('timestamp', 'desc')];
+                    if (currentTimeFilter !== 'all' && start && end) {
+                        qConstraints.push(where('timestamp', '>=', start));
+                        qConstraints.push(where('timestamp', '<=', end));
+                    } else {
+                        qConstraints.push(limit(500)); // กรณี 'ทั้งหมด' ให้โหลดกราฟแค่ 500 ล่าสุดเพื่อป้องกัน Read บานปลาย
                     }
+                    const unsub = onSnapshot(query(collection(db, 'artifacts', appId, 'public', 'data', col), ...qConstraints), (snap) => {
+                        rawData[col] = snap.docs.map(doc => ({ firebaseId: doc.id, data: doc.data().data }));
+                        refreshOverview();
+                    });
+                    activeListeners.push(unsub);
                 });
-            });
+            }
+        }
+
+        async function fetchTableData() {
+            if (currentView === 'overview') return;
+            const { start, end } = getDateRange();
+            let constraints = [orderBy('timestamp', 'desc'), limit(itemsPerPage)];
+            
+            if (currentTimeFilter !== 'all' && start && end) {
+                constraints.unshift(where('timestamp', '<=', end));
+                constraints.unshift(where('timestamp', '>=', start));
+            }
+
+            // Pagination Logic
+            if (currentPage > 1 && pageSnapshots[currentView][currentPage - 1]) {
+                constraints.push(startAfter(pageSnapshots[currentView][currentPage - 1]));
+            }
+
+            const q = query(collection(db, 'artifacts', appId, 'public', 'data', currentView), ...constraints);
+            const snap = await getDocs(q);
+            
+            rawData[currentView] = snap.docs.map(doc => ({ firebaseId: doc.id, data: doc.data().data }));
+            
+            // เก็บ Snapshot สำหรับใช้เปลี่ยนหน้าถัดไป
+            if (snap.docs.length > 0) {
+                pageSnapshots[currentView][currentPage] = snap.docs[snap.docs.length - 1];
+            }
+            
+            renderTable();
+        }
+
+        async function updateStatsWithAggregation() {
+            const { start, end } = getDateRange();
+            const collections = ['orders', 'fix', 'redo', 'problems'];
+            
+            const stats = {};
+            for (const col of collections) {
+                let q = collection(db, 'artifacts', appId, 'public', 'data', col);
+                let constraints = [];
+                if (currentTimeFilter !== 'all' && start && end) {
+                    constraints.push(where('timestamp', '>=', start));
+                    constraints.push(where('timestamp', '<=', end));
+                }
+                const countSnap = await getCountFromServer(query(q, ...constraints));
+                totalCounts[col] = countSnap.data().count;
+            }
+
+            // อัปเดตตัวเลขหน้า UI
+            // สำหรับ "ยอดผลิต" และ "ยอดงานเสีย" เราอาจต้องดึง Document บางส่วนมาคำนวณ sum 
+            // หรือใช้ผลรวมจาก snapshot ที่ดึงมาเพื่อวาดกราฟ (กรณีดูวันนี้)
+            // ในที่นี้ เพื่อให้ Aggregation สมบูรณ์แบบที่สุด ควรใช้ Firebase Cloud Functions ทำ Sum
+            // แต่เนื่องจากโค้ดเดิมคำนวณจาก rawData เราจะรัน updateStats() หลังดึงข้อมูลกราฟครับ
+            updateStats();
+        }
+
+        function getDateRange() {
+            const now = new Date();
+            let start, end;
+            if (currentTimeFilter === 'daily') {
+                start = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+                end = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
+            } else if (currentTimeFilter === 'monthly') {
+                start = new Date(now.getFullYear(), now.getMonth(), 1);
+                end = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
+            } else if (currentTimeFilter === 'custom' && customDateValue) {
+                const parts = customDateValue.split('-');
+                start = new Date(parts[0], parts[1]-1, parts[2]);
+                end = new Date(parts[0], parts[1]-1, parts[2], 23, 59, 59, 999);
+            } else {
+                return { start: null, end: null };
+            }
+            return { start, end };
         }
 
         async function handleFormSubmit(e) {
@@ -273,27 +352,28 @@
                         const bYear = parseInt(y) + 543;
                         return timePart ? `${d}/${m}/${bYear} ${timePart}` : `${d}/${m}/${bYear}`;
                     }
+                    if (input.type === 'time' && input.value) return input.value;
                     return input.value.trim();
                 });
                 if (formData.some(v => v === "")) throw new Error("กรุณากรอกข้อมูลให้ครบ");
                 formData.push("รอดำเนินการ");
                 if (editingRealIdx > -1) {
-                    const allInView = getFilteredData(rawData[currentView]);
-                    const rowObj = allInView[editingRealIdx];
-                    await updateDoc(doc(doc(db, 'artifacts', appId, 'public', 'data', currentView, rowObj.firebaseId)), { data: formData, timestamp: serverTimestamp() });
+                    const rowObj = rawData[currentView][editingRealIdx];
+                    if(rowObj) await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', currentView, rowObj.firebaseId), { data: formData, timestamp: serverTimestamp() });
                     editingRealIdx = -1;
                 } else {
                     await addDoc(collection(db, 'artifacts', appId, 'public', 'data', currentView), { data: formData, timestamp: serverTimestamp() });
                 }
                 showToast("บันทึกสำเร็จ"); 
-                renderForm(currentView); 
+                renderForm(currentView);
+                fetchTableData(); 
             } catch (err) { showAlert("ผิดพลาด", err.message); } finally { btn.disabled = false; btn.innerHTML = originalText; }
         }
 
         function showToast(msg, type = 'success') {
             const container = document.getElementById('toast-container');
             const toast = document.createElement('div');
-            const bg = type === 'success' ? 'bg-orange-500' : type === 'info' ? 'bg-sky-500' : 'bg-slate-800';
+            const bg = type === 'success' ? 'bg-orange-500' : type === 'info' ? 'bg-sky-500' : type === 'error' ? 'bg-rose-600' : 'bg-slate-800';
             toast.className = `toast ${bg} text-white px-6 py-3 rounded-2xl shadow-xl flex items-center gap-3 font-bold text-sm min-w-[200px] border border-white/20 backdrop-blur-md`;
             toast.innerHTML = `<div class="w-2 h-2 rounded-full bg-white animate-ping"></div><span>${msg}</span>`;
             container.appendChild(toast);
@@ -305,7 +385,6 @@
         function parseDate(dateStr) {
             if (!dateStr) return new Date(0);
             const str = dateStr.toString().replace(/"/g, '').trim();
-            if (dateCache.has(str)) return dateCache.get(str);
             const parts = str.split(' ');
             const dPart = parts[0];
             const tPart = parts[1] || "00:00";
@@ -313,32 +392,22 @@
             if (p.length < 3) return new Date(0);
             let y = parseInt(p[2]); if (y > 2400) y -= 543;
             const [h, min] = tPart.split(':');
-            const d = new Date(y, parseInt(p[1]) - 1, parseInt(p[0]), parseInt(h) || 0, parseInt(min) || 0);
-            dateCache.set(str, d); return d;
-        }
-
-        function getFilteredData(arr) {
-            if (currentTimeFilter === 'all') return arr;
-            const now = new Date();
-            return arr.filter(r => {
-                const rd = parseDate(r.data[0]);
-                if (currentTimeFilter === 'daily') return rd.toDateString() === now.toDateString();
-                if (currentTimeFilter === 'monthly') return rd.getMonth() === now.getMonth() && rd.getFullYear() === now.getFullYear();
-                if (currentTimeFilter === 'custom' && customDateValue) { const target = new Date(customDateValue); return rd.toDateString() === target.toDateString(); }
-                return true;
-            });
+            return new Date(y, parseInt(p[1]) - 1, parseInt(p[0]), parseInt(h) || 0, parseInt(min) || 0);
         }
 
         function setTimeFilter(f, val = null) {
             currentTimeFilter = f; customDateValue = val;
-            currentPage = 1; selectedRowKeys.clear(); updateBulkDeleteUI();
+            currentPage = 1; 
+            pageSnapshots = { orders: [null], fix: [null], redo: [null], problems: [null] };
+            selectedRowKeys.clear(); 
             document.querySelectorAll('.filter-btn').forEach(b => b.classList.toggle('active', b.id === `filter-${f}`));
-            if (currentView === 'overview') refreshOverview(); else { renderTable(); updateStats(); }
-            showToast(`เปลี่ยนตัวกรองเรียบร้อยแล้ว`, 'info');
+            syncData();
+            showToast(`เปลี่ยนช่วงเวลา: ${f === 'all' ? 'ข้อมูลทั้งหมด' : 'กรองข้อมูลแล้ว'}`, 'info');
         }
 
         function switchView(v) {
-            currentView = v; currentPage = 1; editingRealIdx = -1; selectedRowKeys.clear(); updateBulkDeleteUI();
+            currentView = v; currentPage = 1; editingRealIdx = -1; selectedRowKeys.clear();
+            pageSnapshots[v] = [null];
             document.querySelectorAll('nav button').forEach(b => b.classList.toggle('nav-active', b.id === `nav-${v}`));
             document.getElementById('view-title').innerText = CONFIG[v].title;
             document.getElementById('view-desc').innerText = CONFIG[v].desc;
@@ -347,11 +416,11 @@
             if (v === 'overview') {
                 document.getElementById('overview-content').classList.remove('hidden');
                 document.getElementById('management-content').classList.add('hidden');
-                refreshOverview();
+                syncData();
             } else {
                 document.getElementById('overview-content').classList.add('hidden');
                 document.getElementById('management-content').classList.remove('hidden');
-                renderForm(v); renderTable(); updateStats();
+                renderForm(v); fetchTableData(); updateStatsWithAggregation();
             }
         }
 
@@ -359,12 +428,13 @@
             const form = document.getElementById('main-form');
             const container = document.getElementById('form-container');
             const now = new Date(); const today = now.toISOString().split('T')[0];
-            const nowTime = now.toTimeString().split(' ')[0].substring(0, 5);
+            const h = now.getHours().toString().padStart(2, '0');
+            const m = now.getMinutes().toString().padStart(2, '0');
+            const nowTime = `${h}:${m}`;
             const isEditing = editingRealIdx > -1;
             container.className = isEditing ? "card p-8 soft-shadow bg-sky-50/30 border-sky-200 border-2" : "card p-8 soft-shadow bg-white border-orange-100 border-dashed border-2";           
             form.innerHTML = CONFIG[v].fields.map(f => {
                 let defaultValue = stickyValues[v][f.name];
-                
                 if (!defaultValue) {
                     if (f.name === 'date') defaultValue = today;
                     else if (f.name === 'time') defaultValue = nowTime;
@@ -372,10 +442,7 @@
                     else if (f.type === 'select') defaultValue = f.options[0];
                     else defaultValue = '';
                 }
-
-                if (f.type === 'select') {
-                    return `<div class="flex flex-col gap-2"><label class="text-[10px] font-black text-slate-400 uppercase tracking-widest">${f.label}</label><select name="${f.name}" id="field-${f.name}" class="input-clean bg-slate-50/50">${f.options.map(o => `<option value="${o}" ${o===defaultValue?'selected':''}>${o}</option>`).join('')}</select></div>`;
-                }
+                if (f.type === 'select') return `<div class="flex flex-col gap-2"><label class="text-[10px] font-black text-slate-400 uppercase tracking-widest">${f.label}</label><select name="${f.name}" id="field-${f.name}" class="input-clean bg-slate-50/50">${f.options.map(o => `<option value="${o}" ${o===defaultValue?'selected':''}>${o}</option>`).join('')}</select></div>`;
                 return `<div class="flex flex-col gap-2"><label class="text-[10px] font-black text-slate-400 uppercase tracking-widest">${f.label}</label><input type="${f.type}" name="${f.name}" id="field-${f.name}" value="${defaultValue}" required class="input-clean"></div>`;
             }).join('') + `
             <div class="flex gap-2">
@@ -388,21 +455,19 @@
 
         async function toggleStatus(view, globalIdx) {
             if (!user) return;
-            const allInView = getFilteredData(rawData[view]);
-            const rowObj = allInView[globalIdx];
+            const rowObj = rawData[view][globalIdx];
             if (!rowObj) return;
             const newData = [...rowObj.data];
             const statusIdx = newData.length - 1;
             newData[statusIdx] = (newData[statusIdx] === 'เสร็จแล้ว' || newData[statusIdx] === 'TRUE') ? 'กำลังทำ' : 'เสร็จแล้ว';
-            try { await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', view, rowObj.firebaseId), { data: newData }); showToast("อัปเดตสถานะแล้ว"); } catch(e) { console.error(e); }
+            try { await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', view, rowObj.firebaseId), { data: newData }); showToast("อัปเดตสถานะแล้ว"); fetchTableData(); } catch(e) { console.error(e); }
         }
 
         async function deleteRow(v, globalIdx) {
             if (!user) return;
-            const allInView = getFilteredData(rawData[v]);
-            const rowObj = allInView[globalIdx];
+            const rowObj = rawData[v][globalIdx];
             if(!rowObj || !confirm("ลบรายการนี้?")) return;
-            try { await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', v, rowObj.firebaseId)); showToast("ลบข้อมูลแล้ว"); } catch(e) { console.error(e); }
+            try { await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', v, rowObj.firebaseId)); showToast("ลบข้อมูลแล้ว"); fetchTableData(); } catch(e) { console.error(e); }
         }
 
         function toggleRowSelection(escapedJson) {
@@ -412,10 +477,7 @@
         }
 
         function toggleAllSelection(isChecked) {
-            const allInView = getFilteredData(rawData[currentView]);
-            const start = (currentPage - 1) * itemsPerPage;
-            const displayData = allInView.slice(start, start + itemsPerPage);
-            displayData.forEach(rowObj => { const key = JSON.stringify(rowObj.data); if (isChecked) selectedRowKeys.add(key); else selectedRowKeys.delete(key); });
+            rawData[currentView].forEach(rowObj => { const key = JSON.stringify(rowObj.data); if (isChecked) selectedRowKeys.add(key); else selectedRowKeys.delete(key); });
             updateBulkDeleteUI(); renderTable();
         }
 
@@ -428,17 +490,17 @@
         async function deleteSelectedRows() {
             if (!user || selectedRowKeys.size === 0) return;
             if (!confirm(`ยืนยันการลบทั้งหมด ${selectedRowKeys.size} รายการ?`)) return;         
-            const allInView = getFilteredData(rawData[currentView]);
+            const allInView = rawData[currentView];
             const keysToDelete = Array.from(selectedRowKeys);
             for (const rowJson of keysToDelete) {
                 const targetObj = allInView.find(o => JSON.stringify(o.data) === rowJson);
-                if (targetObj) { await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', currentView, targetObj.firebaseId)); }
+                if (targetObj) await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', currentView, targetObj.firebaseId));
             }
-            selectedRowKeys.clear(); updateBulkDeleteUI(); showToast(`ลบสำเร็จแล้ว`);
+            selectedRowKeys.clear(); updateBulkDeleteUI(); showToast(`ลบสำเร็จแล้ว`); fetchTableData();
         }
 
         function editRow(v, globalIdx) {
-            const allInView = getFilteredData(rawData[v]);
+            const allInView = rawData[v];
             const target = allInView[globalIdx].data;
             editingRealIdx = globalIdx;
             renderForm(v);
@@ -450,7 +512,7 @@
             } else {
                 let dateParts = target[0].split('/'); let yr = parseInt(dateParts[2]); if (yr > 2500) yr -= 543;
                 document.getElementById('field-date').value = `${yr}-${dateParts[1].padStart(2, '0')}-${dateParts[0].padStart(2, '0')}`;
-                document.getElementById('field-time').value = target[1].substring(0, 5);
+                document.getElementById('field-time').value = target[1];
                 CONFIG[v].fields.forEach((f, fIdx) => { if(f.name!=='date'&&f.name!=='time') document.getElementById(`field-${f.name}`).value = target[fIdx+2] || ''; });
             }
             document.querySelector('main').scrollTo({ top: 0, behavior: 'smooth' });
@@ -462,22 +524,17 @@
             const body = document.getElementById('table-body');
             const info = document.getElementById('pagination-info');
             const controls = document.getElementById('pagination-controls');
-            const allInView = getFilteredData(rawData[currentView]);
+            const allInView = rawData[currentView];
             
-            const totalItems = allInView.length;
+            const totalItems = totalCounts[currentView];
             const totalPages = Math.ceil(totalItems / itemsPerPage) || 1;
-            if (currentPage > totalPages) currentPage = totalPages;
-
-            const start = (currentPage - 1) * itemsPerPage;
-            const displayData = allInView.slice(start, start + itemsPerPage);
-            const allSelectedInPage = displayData.length > 0 && displayData.every(rowObj => selectedRowKeys.has(JSON.stringify(rowObj.data)));
             
-            info.innerText = `หน้า ${currentPage} จาก ${totalPages} (ทั้งหมด ${totalItems} รายการ)`;
-            head.innerHTML = `<th class="w-12"><input type="checkbox" class="check-all-box" onchange="toggleAllSelection(this.checked)" ${allSelectedInPage?'checked':''}></th>` + CONFIG[currentView].cols.map(c => `<th>${c}</th>`).join('') + `<th class="text-right">จัดการ</th>`;
+            info.innerText = `หน้า ${currentPage} (รายการทั้งหมด ${totalItems} รายการ)`;
+            head.innerHTML = `<th class="w-12"><input type="checkbox" class="check-all-box" onchange="toggleAllSelection(this.checked)"></th>` + CONFIG[currentView].cols.map(c => `<th>${c}</th>`).join('') + `<th class="text-right">จัดการ</th>`;
             
-            body.innerHTML = displayData.map((rowObj, localIdx) => {
+            body.innerHTML = allInView.map((rowObj, localIdx) => {
                 const row = rowObj.data;
-                const globalIdx = start + localIdx;
+                const globalIdx = localIdx;
                 const rowJson = JSON.stringify(row);
                 const isSelected = selectedRowKeys.has(rowJson);
                 const statusVal = row[row.length - 1];
@@ -493,36 +550,38 @@
                     ${cellsHtml}
                     <td class="text-right"><div class="flex justify-end gap-3"><button onclick="editRow('${currentView}', ${globalIdx})" class="text-sky-400 opacity-0 group-hover:opacity-100 font-bold text-xs">แก้ไข</button><button onclick="deleteRow('${currentView}', ${globalIdx})" class="text-slate-200 group-hover:text-rose-400 font-bold text-xs">ลบ</button></div></td>
                 </tr>`;
-            }).join('') || '<tr><td colspan="20" class="text-center py-24 italic text-slate-300">ไม่มีข้อมูล</td></tr>';
+            }).join('') || '<tr><td colspan="20" class="text-center py-24 italic text-slate-300">ไม่มีข้อมูลในช่วงเวลานี้</td></tr>';
             
             let pBtns = ''; 
-            if (totalPages > 1) {
-                pBtns += `<button onclick="changePage(${currentPage-1})" class="${currentPage===1?'opacity-30 pointer-events-none':''} px-4 py-2 rounded-xl border border-orange-100 text-orange-500 text-[10px] font-bold hover:bg-orange-50 transition-all">ก่อนหน้า</button>`;
-                let startPage = Math.max(1, currentPage - 2);
-                let endPage = Math.min(totalPages, startPage + 4);
-                if (endPage - startPage < 4) startPage = Math.max(1, endPage - 4);
-                for (let i = startPage; i <= endPage; i++) {
-                    pBtns += `<button onclick="changePage(${i})" class="w-10 h-10 rounded-xl border text-[10px] font-bold transition-all ${i===currentPage?'bg-orange-500 text-white shadow-lg shadow-orange-100':'text-slate-400 border-orange-50 hover:bg-orange-50'}">${i}</button>`;
-                }
-                pBtns += `<button onclick="changePage(${currentPage+1})" class="${currentPage===totalPages?'opacity-30 pointer-events-none':''} px-4 py-2 rounded-xl border border-orange-100 text-orange-500 text-[10px] font-bold hover:bg-orange-50 transition-all">ถัดไป</button>`;
-            }
+            pBtns += `<button onclick="changePage(${currentPage-1})" class="${currentPage===1?'opacity-30 pointer-events-none':''} px-4 py-2 rounded-xl border border-orange-100 text-orange-500 text-[10px] font-bold hover:bg-orange-50 transition-all">ก่อนหน้า</button>`;
+            pBtns += `<div class="px-4 text-[10px] font-bold text-slate-400">หน้า ${currentPage}</div>`;
+            pBtns += `<button onclick="changePage(${currentPage+1})" class="${allInView.length < itemsPerPage ? 'opacity-30 pointer-events-none':''} px-4 py-2 rounded-xl border border-orange-100 text-orange-500 text-[10px] font-bold hover:bg-orange-50 transition-all">ถัดไป</button>`;
             controls.innerHTML = pBtns;
         }
 
-        function changePage(p) { currentPage = p; renderTable(); document.querySelector('main').scrollTo({ top: 400, behavior: 'smooth' }); }
+        function changePage(p) { 
+            if (p < 1) return;
+            currentPage = p; 
+            fetchTableData(); 
+            document.querySelector('main').scrollTo({ top: 400, behavior: 'smooth' }); 
+        }
         
         function updateStats() {
-            const o = getFilteredData(rawData.orders); const r = getFilteredData(rawData.redo); const f = getFilteredData(rawData.fix);
+            const o = rawData.orders; const r = rawData.redo; const f = rawData.fix;
             const total = o.reduce((s, x) => s + (parseInt(x.data[3]) || 0), 0);
             const totalRedo = r.reduce((s, x) => s + (parseInt(x.data[3]) || 0), 0);
             const pending = f.filter(x => x.data[x.data.length-1] !== 'เสร็จแล้ว' && x.data[x.data.length-1] !== 'TRUE').length;
-            const items = [{ label: "ยอดผลิตรวมทั้งหมด", val: total.toLocaleString(), color: "text-orange-500", bg: "bg-orange-50" },{ label: "จำนวนงานเสียรวม", val: totalRedo.toLocaleString(), color: "text-rose-500", bg: "bg-rose-50" },{ label: "งานแก้ที่ค้างอยู่", val: pending, color: "text-sky-500", bg: "bg-sky-50" }];
+            const items = [
+                { label: "ยอดผลิตงานทั้งหมด", val: total.toLocaleString(), color: "text-orange-500", bg: "bg-orange-50" },
+                { label: "ยอดงานเสียทั้งหมด", val: totalRedo.toLocaleString(), color: "text-rose-500", bg: "bg-rose-50" },
+                { label: "งานแก้คงค้าง", val: pending, color: "text-sky-500", bg: "bg-sky-50" }
+            ];
             document.getElementById('stats-grid').innerHTML = items.map(s => `<div class="card p-6 soft-shadow flex flex-col justify-between h-32 relative overflow-hidden group hover:scale-[1.03]"><div class="absolute -right-2 -bottom-2 w-12 h-12 ${s.bg} rounded-full opacity-20 group-hover:scale-150 transition-transform duration-500"></div><p class="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] relative z-10">${s.label}</p><h4 class="text-2xl font-black ${s.color} relative z-10">${s.val}</h4></div>`).join('');
         }
 
         function refreshOverview() {
             updateStats(); Object.values(charts).forEach(c => c && c.destroy());
-            const orders = getFilteredData(rawData.orders); const redo = getFilteredData(rawData.redo); const fix = getFilteredData(rawData.fix);
+            const orders = rawData.orders; const redo = rawData.redo; const fix = rawData.fix;
             const labels = []; for (let h = 8; h <= 23; h++) labels.push(`${h.toString().padStart(2, '0')}:30`);
             const getBucket = (t) => { if(!t) return null; const str = t.toString(); const p = str.includes(',') ? str.split(',')[1].trim().split(':') : str.split(':'); const h = parseInt(p[0]); if (isNaN(h) || h < 8) return null; return `${h.toString().padStart(2, '0')}:30`; };
             const depts = ['งานเรียง', 'งานล็อต', 'งานBY', 'งานเฉินผิง', 'งานด่วน'];
@@ -544,7 +603,7 @@
             const newData = [...currentData];
             const statusIdx = newData.length - 1;
             newData[statusIdx] = (newData[statusIdx] === 'เสร็จแล้ว' || newData[statusIdx] === 'TRUE') ? 'กำลังทำ' : 'เสร็จแล้ว';
-            try { await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', view, fbId), { data: newData }); showToast("อัปเดตสถานะแล้ว"); } catch (err) { console.error("Sync error:", err); }
+            try { await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', view, fbId), { data: newData }); showToast("อัปเดตสถานะแล้ว"); syncData(); } catch (err) { console.error("Sync error:", err); }
         }
 
         function filterTableSearch() { const q = document.getElementById('search').value.toLowerCase(); document.querySelectorAll('#table-body tr').forEach(r => r.style.display = r.innerText.toLowerCase().includes(q) ? '' : 'none'); }
@@ -582,9 +641,8 @@
             const link = document.createElement("a"); link.href = URL.createObjectURL(blob); link.download = "Report_All.csv"; link.click();
         }
 
-        window.onload = async () => { await initAuth(); syncData(); switchView('overview'); };
+        window.onload = async () => { await initAuth(); switchView('overview'); };
         window.setTimeFilter = setTimeFilter; window.switchView = switchView; window.handleFormSubmit = handleFormSubmit; window.toggleStatus = toggleStatus; window.directToggleStatus = directToggleStatus; window.syncData = syncData; window.deleteRow = deleteRow; window.editRow = editRow; window.cancelEdit = cancelEdit; window.changePage = changePage; window.filterTableSearch = filterTableSearch; window.handleFiles = handleFiles; window.exportAllData = exportAllData; window.toggleRowSelection = toggleRowSelection; window.toggleAllSelection = toggleAllSelection; window.deleteSelectedRows = deleteSelectedRows;
     </script>
 </body>
-
 </html>
