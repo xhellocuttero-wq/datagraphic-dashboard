@@ -177,7 +177,7 @@
     <script type="module">
         import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
         import { getAuth, signInWithCustomToken, signInAnonymously, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js';
-        import { getFirestore, collection, doc, addDoc, setDoc, updateDoc, deleteDoc, query, onSnapshot, serverTimestamp, getDocs, where, orderBy, limit } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js';        
+        import { getFirestore, collection, doc, addDoc, setDoc, updateDoc, deleteDoc, query, onSnapshot, serverTimestamp, getDocs, where, orderBy, limit, initializeFirestore } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js';        
         
         const firebaseConfig = {
             apiKey: "AIzaSyA0QWdvnA4ubJ42OAHxnDDJQUHkIFasu3w",
@@ -193,7 +193,13 @@
         const dateCache = new Map();
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
-        const db = getFirestore(app);
+
+        // --- แก้ไขจุดที่ 1: ใช้ initializeFirestore แทน getFirestore เพื่อเปิดใช้งาน Long Polling ---
+        const db = initializeFirestore(app, {
+            experimentalForceLongPolling: true
+        });
+        // -----------------------------------------------------------------------------------
+
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
         
         // rawData holds data ONLY for the current time filter to save memory and reads
