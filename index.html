@@ -213,10 +213,10 @@
 
         const CONFIG = {
             overview: { title: "สรุปผลการทำงาน", desc: "ภาพรวมข้อมูลการผลิตและประสิทธิภาพรายแผนก" },
-            orders: { title: "บันทึกงานผลิต", desc: "จัดการรายการผลิตประจำวัน", cols: ['วันที่', 'เวลา', 'เลขที่งาน', 'จำนวน', 'แผนก', 'สีงาน', 'สถานะ'], fields: [{ name: 'date', label: 'วันที่', type: 'date' }, { name: 'time', label: 'เวลา', type: 'time' }, { name: 'id', label: 'เลขที่งาน', type: 'number' }, { name: 'count', label: 'จำนวน', type: 'number' }, { name: 'dept', label: 'แผนก', type: 'select', options: ['งานเรียง', 'งานล็อต', 'งานBY', 'งานเฉินผิง', 'งานด่วน'] }, { name: 'color', label: 'สีงาน', type: 'select', options: ['สีแดง', 'สีเหลือง', 'สีชมพู', 'สีเขียว', 'สีส้ม', 'สีฟ้า', 'สีม่วง', 'สีขาว'] }] },
+            orders: { title: "บันทึกงานผลิต", desc: "จัดการรายการผลิตประจำวัน", cols: ['วันที่', 'เวลา', 'เลขที่งาน', 'จำนวน', 'แผนก', 'สีงาน', 'สถานะ'], fields: [{ name: 'date', label: 'วันที่', type: 'date' }, { name: 'time', label: 'เวลา (24ชม.)', type: 'time' }, { name: 'id', label: 'เลขที่งาน', type: 'number' }, { name: 'count', label: 'จำนวน', type: 'number' }, { name: 'dept', label: 'แผนก', type: 'select', options: ['งานเรียง', 'งานล็อต', 'งานBY', 'งานเฉินผิง', 'งานด่วน'] }, { name: 'color', label: 'สีงาน', type: 'select', options: ['สีแดง', 'สีเหลือง', 'สีชมพู', 'สีเขียว', 'สีส้ม', 'สีฟ้า', 'สีม่วง', 'สีขาว'] }] },
             fix: { title: "รายการงานแก้", desc: "ติดตามรายการที่ต้องแก้ไข", cols: ['วันที่และเวลา', 'รูปที่', 'ประเภท', 'รหัสSKU', 'รหัสออเดอร์', 'สถานะ'], fields: [{ name: 'datetime', label: 'วันที่และเวลา', type: 'datetime-local' }, { name: 'photo_no', label: 'รูปที่', type: 'number' }, { name: 'type', label: 'ประเภท', type: 'select', options: ['ผิดลาย', 'ผิดสี', 'ผิดตำแหน่ง', 'ผิดขนาด', 'อื่น'] }, { name: 'sku', label: 'รหัสSKU', type: 'text' }, { name: 'orderid', label: 'รหัสออเดอร์', type: 'text' }] },
-            redo: { title: "บันทึกงานเสีย", desc: "จัดเก็บข้อมูลงานที่ต้องทำใหม่", cols: ['วันที่', 'เวลา', 'ครั้งที่', 'จำนวน', 'สถานะ'], fields: [{ name: 'date', label: 'วันที่', type: 'date' }, { name: 'time', label: 'เวลา', type: 'time' }, { name: 'attempt', label: 'ทำใหม่ครั้งที่', type: 'number' }, { name: 'count', label: 'จำนวนเสีย', type: 'number' }] },
-            problems: { title: "บันทึกปัญหา", desc: "เก็บบันทึกอุปสรรคและปัญหาในการทำงาน", cols: ['วันที่', 'เวลา', 'หัวข้อปัญหา', 'รายละเอียด', 'สถานะ'], fields: [{ name: 'date', label: 'วันที่', type: 'date' }, { name: 'time', label: 'เวลา', type: 'time' }, { name: 'issue', label: 'หัวข้อปัญหา', type: 'select', options: ['ปัญหาบุคคล', 'ปัญหางาน'] }, { name: 'detail', label: 'รายละเอียด', type: 'text' }] }
+            redo: { title: "บันทึกงานเสีย", desc: "จัดเก็บข้อมูลงานที่ต้องทำใหม่", cols: ['วันที่', 'เวลา', 'ครั้งที่', 'จำนวน', 'สถานะ'], fields: [{ name: 'date', label: 'วันที่', type: 'date' }, { name: 'time', label: 'เวลา (24ชม.)', type: 'time' }, { name: 'attempt', label: 'ทำใหม่ครั้งที่', type: 'number' }, { name: 'count', label: 'จำนวนเสีย', type: 'number' }] },
+            problems: { title: "บันทึกปัญหา", desc: "เก็บบันทึกอุปสรรคและปัญหาในการทำงาน", cols: ['วันที่', 'เวลา', 'หัวข้อปัญหา', 'รายละเอียด', 'สถานะ'], fields: [{ name: 'date', label: 'วันที่', type: 'date' }, { name: 'time', label: 'เวลา (24ชม.)', type: 'time' }, { name: 'issue', label: 'หัวข้อปัญหา', type: 'select', options: ['ปัญหาบุคคล', 'ปัญหางาน'] }, { name: 'detail', label: 'รายละเอียด', type: 'text' }] }
         };
         const themeColors = { orange: '#fb923c', blue: '#38bdf8', indigo: '#818cf8', amber: '#fbbf24', rose: '#fb7185', teal: '#2dd4bf', slate: '#94a3b8' };
 
@@ -562,7 +562,7 @@
             const total = o.reduce((s, x) => s + (parseInt(x.data[3]) || 0), 0);
             const totalRedo = r.reduce((s, x) => s + (parseInt(x.data[3]) || 0), 0);
             const pending = f.filter(x => x.data[x.data.length-1] !== 'เสร็จแล้ว' && x.data[x.data.length-1] !== 'TRUE').length;
-            const items = [{ label: "ยอดผลิตงานทั้งหมด", val: total.toLocaleString(), color: "text-orange-500", bg: "bg-orange-50" },{ label: "ยอดงานเสียทั้งหมด", val: totalRedo.toLocaleString(), color: "text-rose-500", bg: "bg-rose-50" },{ label: "งานแก้คงค้าง", val: pending, color: "text-sky-500", bg: "bg-sky-50" }];
+            const items = [{ label: "ยอดผลิต (ตามช่วงเวลา)", val: total.toLocaleString(), color: "text-orange-500", bg: "bg-orange-50" },{ label: "งานเสีย (ตามช่วงเวลา)", val: totalRedo.toLocaleString(), color: "text-rose-500", bg: "bg-rose-50" },{ label: "งานแก้คงค้าง", val: pending, color: "text-sky-500", bg: "bg-sky-50" }];
             document.getElementById('stats-grid').innerHTML = items.map(s => `<div class="card p-6 soft-shadow flex flex-col justify-between h-32 relative overflow-hidden group hover:scale-[1.03]"><div class="absolute -right-2 -bottom-2 w-12 h-12 ${s.bg} rounded-full opacity-20 group-hover:scale-150 transition-transform duration-500"></div><p class="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] relative z-10">${s.label}</p><h4 class="text-2xl font-black ${s.color} relative z-10">${s.val}</h4></div>`).join('');
         }
 
@@ -632,6 +632,4 @@
         window.setTimeFilter = setTimeFilter; window.switchView = switchView; window.handleFormSubmit = handleFormSubmit; window.toggleStatus = toggleStatus; window.directToggleStatus = directToggleStatus; window.syncData = syncData; window.deleteRow = deleteRow; window.editRow = editRow; window.cancelEdit = cancelEdit; window.changePage = changePage; window.filterTableSearch = filterTableSearch; window.handleFiles = handleFiles; window.exportAllData = exportAllData; window.toggleRowSelection = toggleRowSelection; window.toggleAllSelection = toggleAllSelection; window.deleteSelectedRows = deleteSelectedRows;
     </script>
 </body>
-
 </html>
-
