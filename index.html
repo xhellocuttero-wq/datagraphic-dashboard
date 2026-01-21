@@ -37,7 +37,6 @@
         .datepicker-wrapper input[type="date"] { position: absolute; opacity: 0; width: 100%; height: 100%; cursor: pointer; z-index: 2; }
         .datepicker-wrapper svg { position: relative; z-index: 1; color: #fb923c; }
         .check-all-box { width: 16px; height: 16px; accent-color: #fb923c; cursor: pointer; }
-        /* Badge for Realtime/Static Status */
         .status-badge { font-size: 9px; padding: 2px 6px; border-radius: 4px; margin-left: 8px; font-weight: bold; }
         .status-live { background-color: #dcfce7; color: #166534; }
         .status-static { background-color: #f1f5f9; color: #64748b; }
@@ -203,7 +202,6 @@
         const db = getFirestore(app);
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
         
-        // --- Persistence for cost saving (re-fetch without server cost) ---
         try {
             enableIndexedDbPersistence(db).catch((err) => {
                 if (err.code == 'failed-precondition') console.log('Persistence failed: Multiple tabs open');
@@ -213,7 +211,6 @@
 
         let rawData = { orders: [], fix: [], redo: [], problems: [] };
         let activeListeners = []; 
-        
         let currentView = 'overview';
         let currentTimeFilter = 'daily'; 
         let customDateValue = null;
@@ -237,11 +234,9 @@
         async function initAuth() { try { if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) { await signInWithCustomToken(auth, __initial_auth_token); } else { await signInAnonymously(auth); } } catch (error) { await signInAnonymously(auth); } }
         onAuthStateChanged(auth, (u) => { user = u; if (u) { document.getElementById('user-display').innerText = `ID ผู้ใช้งาน: ${u.uid.substring(0,6)}...`; syncData(); } });
 
-        // --- UPDATED HYBRID SYNC (Economy + Realtime) ---
+        // --- UPDATED HYBRID SYNC (Economy for Monthly & All) ---
         function syncData() {
             if (!user) return;
-            
-            // Cleanup old listeners
             activeListeners.forEach(unsub => unsub());
             activeListeners = [];
             rawData = { orders: [], fix: [], redo: [], problems: [] }; 
@@ -250,24 +245,26 @@
             const { start, end } = getDateRange();
             const statusIndicator = document.getElementById('data-status-indicator');
 
-            // Logic: If 'All', use getDocs (One-time fetch to save reads). 
-            // If Daily/Monthly, use onSnapshot (Real-time).
+            // แก้ไขตรงนี้: ให้โหมด 'monthly' และ 'all' เป็นโหมดประหยัด (ดึงครั้งเดียว)
             const isStaticMode = currentTimeFilter === 'all' || currentTimeFilter === 'monthly';
             
             if (isStaticMode) {
-                statusIndicator.innerText = "All";
+                statusIndicator.innerText = "Economy Mode (Static)";
                 statusIndicator.className = "status-badge status-static";
                 statusIndicator.classList.remove('hidden');
             } else {
-                statusIndicator.innerText = "Real-time";
+                statusIndicator.innerText = "Real-time Mode";
                 statusIndicator.className = "status-badge status-live";
                 statusIndicator.classList.remove('hidden');
             }
 
             collections.forEach(col => {
                 let constraints = [orderBy('timestamp', 'desc')];
-                
+                // เพิ่มเงื่อนไขวันที่ให้ Monthly ด้วย แม้จะเป็น Static
                 if (!isStaticMode && start && end) {
+                    constraints.push(where('timestamp', '>=', start));
+                    constraints.push(where('timestamp', '<=', end));
+                } else if (currentTimeFilter === 'monthly' && start && end) {
                     constraints.push(where('timestamp', '>=', start));
                     constraints.push(where('timestamp', '<=', end));
                 }
@@ -275,7 +272,6 @@
                 const qCol = query(collection(db, 'artifacts', appId, 'public', 'data', col), ...constraints);
 
                 if (isStaticMode) {
-                    // ONE-TIME FETCH for 'All' to save costs and prevent loops
                     getDocs(qCol).then((snapshot) => {
                         const newData = snapshot.docs.map(doc => ({ firebaseId: doc.id, data: doc.data().data }));
                         rawData[col] = newData;
@@ -285,9 +281,7 @@
                         showToast("โหลดข้อมูลล้มเหลว", "error");
                     });
                 } else {
-                    // REAL-TIME for Daily/Monthly
                     const unsub = onSnapshot(qCol, (snapshot) => {
-                        // Metadata.fromCache check if needed, but persistence handles it silently
                         const newData = snapshot.docs.map(doc => ({ firebaseId: doc.id, data: doc.data().data }));
                         rawData[col] = newData;
                         triggerRender();
@@ -302,12 +296,8 @@
         function triggerRender() {
             clearTimeout(renderTimer);
             renderTimer = setTimeout(() => {
-                if (currentView === 'overview') {
-                    refreshOverview();
-                } else {
-                    renderTable();
-                    updateStats();
-                }
+                if (currentView === 'overview') refreshOverview();
+                else { renderTable(); updateStats(); }
             }, 150);
         }
 
@@ -324,9 +314,7 @@
                 const parts = customDateValue.split('-');
                 start = new Date(parts[0], parts[1]-1, parts[2]);
                 end = new Date(parts[0], parts[1]-1, parts[2], 23, 59, 59, 999);
-            } else {
-                return { start: null, end: null }; 
-            }
+            } else return { start: null, end: null }; 
             return { start, end };
         }
 
@@ -345,9 +333,7 @@
                         const bYear = parseInt(y) + 543;
                         return timePart ? `${d}/${m}/${bYear} ${timePart}` : `${d}/${m}/${bYear}`;
                     }
-                    if (input.type === 'time' && input.value) {
-                        return input.value; 
-                    }
+                    if (input.type === 'time' && input.value) return input.value; 
                     return input.value.trim();
                 });
                 if (formData.some(v => v === "")) throw new Error("กรุณากรอกข้อมูลให้ครบ");
@@ -356,8 +342,7 @@
                     const rowObj = rawData[currentView][editingRealIdx];
                     if(rowObj) {
                         await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', currentView, rowObj.firebaseId), { data: formData, timestamp: serverTimestamp() });
-                        // If in 'all' mode (static), manually update local data to reflect change immediately
-                        if (currentTimeFilter === 'all') {
+                        if (currentTimeFilter === 'all' || currentTimeFilter === 'monthly') {
                              rowObj.data = formData;
                              triggerRender();
                         }
@@ -365,8 +350,7 @@
                     editingRealIdx = -1;
                 } else {
                     const docRef = await addDoc(collection(db, 'artifacts', appId, 'public', 'data', currentView), { data: formData, timestamp: serverTimestamp() });
-                    // If in 'all' mode (static), manually append to local data
-                    if (currentTimeFilter === 'all') {
+                    if (currentTimeFilter === 'all' || currentTimeFilter === 'monthly') {
                         rawData[currentView].unshift({ firebaseId: docRef.id, data: formData });
                         triggerRender();
                     }
@@ -408,7 +392,7 @@
             currentPage = 1; selectedRowKeys.clear(); updateBulkDeleteUI();
             document.querySelectorAll('.filter-btn').forEach(b => b.classList.toggle('active', b.id === `filter-${f}`));
             syncData();
-            showToast(`เปลี่ยนช่วงเวลา: ${f === 'all' ? 'ข้อมูลทั้งหมด (Offline Mode)' : 'Real-time Mode'}`, 'info');
+            showToast(`ช่วงเวลา: ${f === 'daily' ? 'Real-time' : 'Economy Mode'}`, 'info');
         }
 
         function switchView(v) {
@@ -472,7 +456,7 @@
             newData[statusIdx] = (newData[statusIdx] === 'เสร็จแล้ว' || newData[statusIdx] === 'TRUE') ? 'กำลังทำ' : 'เสร็จแล้ว';
             try { 
                 await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', view, rowObj.firebaseId), { data: newData }); 
-                if (currentTimeFilter === 'all') { rowObj.data = newData; triggerRender(); }
+                if (currentTimeFilter === 'all' || currentTimeFilter === 'monthly') { rowObj.data = newData; triggerRender(); }
                 showToast("อัปเดตสถานะแล้ว"); 
             } catch(e) { console.error(e); }
         }
@@ -483,7 +467,7 @@
             if(!rowObj || !confirm("ลบรายการนี้?")) return;
             try { 
                 await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', v, rowObj.firebaseId)); 
-                if (currentTimeFilter === 'all') { rawData[v].splice(globalIdx, 1); triggerRender(); }
+                if (currentTimeFilter === 'all' || currentTimeFilter === 'monthly') { rawData[v].splice(globalIdx, 1); triggerRender(); }
                 showToast("ลบข้อมูลแล้ว"); 
             } catch(e) { console.error(e); }
         }
@@ -517,10 +501,10 @@
                 const targetObj = allInView.find(o => JSON.stringify(o.data) === rowJson);
                 if (targetObj) { 
                     await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', currentView, targetObj.firebaseId)); 
-                    if (currentTimeFilter === 'all') { const idx = rawData[currentView].indexOf(targetObj); if(idx>-1) rawData[currentView].splice(idx,1); }
+                    if (currentTimeFilter === 'all' || currentTimeFilter === 'monthly') { const idx = rawData[currentView].indexOf(targetObj); if(idx>-1) rawData[currentView].splice(idx,1); }
                 }
             }
-            if (currentTimeFilter === 'all') triggerRender();
+            if (currentTimeFilter === 'all' || currentTimeFilter === 'monthly') triggerRender();
             selectedRowKeys.clear(); updateBulkDeleteUI(); showToast(`ลบสำเร็จแล้ว`);
         }
 
@@ -636,7 +620,7 @@
             newData[statusIdx] = (newData[statusIdx] === 'เสร็จแล้ว' || newData[statusIdx] === 'TRUE') ? 'กำลังทำ' : 'เสร็จแล้ว';
             try { 
                 await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', view, fbId), { data: newData }); 
-                if (currentTimeFilter === 'all') { // Manually update UI for static mode
+                if (currentTimeFilter === 'all' || currentTimeFilter === 'monthly') { // Manually update UI for static mode
                     const target = rawData[view].find(x => x.firebaseId === fbId);
                     if (target) { target.data = newData; triggerRender(); }
                 }
@@ -684,5 +668,3 @@
     </script>
 </body>
 </html>
-
-
